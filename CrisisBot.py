@@ -118,6 +118,8 @@ async def randomVideo(context, *, query):
 
 @client.command(aliases=["ask"])
 async def askAI(context, *, prompt):
+    if context.channel.id != CHANNEL_ID:
+        return
     try:
         openai.api_key = OPEN_API_KEY
         response = openai.Completion.create(
