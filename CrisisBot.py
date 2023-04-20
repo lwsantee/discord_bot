@@ -14,7 +14,7 @@ DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.GwtksM.aq6av9XoWi1Uy7-VCx8Y14wQV
 GOOGLE_API_KEY = 'AIzaSyCUeJzbNBJ3L1LusiIzeZbW69-nWk4ejH8'
 CX = '551d46812ea734e0f'
 OPEN_API_KEY = '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'
-CHANNEL_ID = 1098640547561877587
+CHANNEL_ID = 1096284252125012068
 
 
 @client.event
@@ -118,6 +118,8 @@ async def randomVideo(context, *, query):
 
 @client.command(aliases=["ask"])
 async def askAI(context, *, prompt):
+    if context.channel.id != CHANNEL_ID:
+        return
     try:
         openai.api_key = OPEN_API_KEY
         response = openai.Completion.create(
