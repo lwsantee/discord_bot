@@ -3,10 +3,8 @@ from discord.ext import commands
 from discord.utils import get
 import youtube_dl
 
-# Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
 
-# Set up the YoutubeDL object
 ytdl_format_options = {'format': 'bestaudio/best', 'quiet': True}
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
@@ -58,7 +56,3 @@ class Music(commands.Cog):
         """Queues a song to be played in a voice call."""
         self.song_queue.append(url)
         await ctx.send(f'Queued {url}.')
-
-bot = commands.Bot(command_prefix='!')
-bot.add_cog(Music(bot))
-bot.run('YOUR_TOKEN_HERE')

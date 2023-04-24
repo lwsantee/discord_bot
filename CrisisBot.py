@@ -10,9 +10,11 @@ import requests
 import openai
 import yt_dlp as youtube_dl
 
+from Music import Music
+
 intents = discord.Intents.default()
 intents.message_content = True
-client = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix="/", intents=intents)
 
 DISCORD_BOT_TOKEN = '***REMOVED***'
 GOOGLE_API_KEY = '***REMOVED***'
@@ -22,36 +24,34 @@ CHANNEL_ID = ***REMOVED***
 MESSAGE_COLOR = 0xFF5733
 
 
-@client.event
+@bot.event
 async def on_ready():
     print("CrisisBot is online!")
-    channel = client.get_channel(CHANNEL_ID)
+    channel = bot.get_channel(CHANNEL_ID)
     await channel.send("CrisisBot is online!")
     asyncio.create_task(keep_alive())
 
 
-async def keep_alive():
-    while True:
-        try:
-            openai.api_key = OPENAI_API_KEY
-            response = openai.Completion.create(
-                engine="davinci",
-                prompt="ping",
-                max_tokens=1,
-                n=1,
-                stop=None,
-                temperature=0.5
-            )
-            if response.choices[0].text.strip() == "pong":
-                print("OpenAI API connection is live!")
-        except Exception as e:
-            print(f"OpenAI API connection failed with error: {str(e)}")
-        await asyncio.sleep(300)
+@bot.event
+async def on_command(ctx):
+    if ctx.message.channel.id != CHANNEL_ID:
+        print(f"Command '{ctx.message.content}' was not in the allowed channel.")
+    else:
+        print(f"Command used by {ctx.author.name}: {ctx.message.content}")
 
 
-@client.command(aliases=["image"])
-async def randomImage(context, *, query):
-    if context.channel.id != CHANNEL_ID:
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.reply("Invalid command.")
+    else:
+        await ctx.reply(f"An unhandled error occurred: {error}")
+
+
+
+@bot.command()
+async def image(ctx, *, query):
+    if ctx.channel.id != CHANNEL_ID:
         return
     try:
         search_url = "https://www.googleapis.com/customsearch/v1"
@@ -65,23 +65,23 @@ async def randomImage(context, *, query):
         response = requests.get(search_url, params=search_params).json()
         images = [item["link"] for item in response.get("items", [])]
         if not images:
-            await context.send("No images found.")
+            await ctx.send("No images found.")
         else:
             image_url = random.choice(images)
             embed = discord.Embed(title=f"Here's a {query} image for you!", color=MESSAGE_COLOR)
             embed.set_image(url=image_url)
             embed.set_footer(text=f'{images.index(image_url) + 1} of {len(images)}')
-            await context.reply(embed=embed)
+            await ctx.reply(embed=embed)
     except HttpError as error:
         if error.resp.status == 429:
-            await context.reply("Too many requests today. Please try again later.")
+            await ctx.reply("Too many requests today. Please try again later.")
         else:
             raise error
 
 
-@client.command(aliases=["gif"])
-async def randomGif(context, *, query):
-    if context.channel.id != CHANNEL_ID:
+@bot.command()
+async def gif(ctx, *, query):
+    if ctx.channel.id != CHANNEL_ID:
         return
     try:
         search_url = "https://www.googleapis.com/customsearch/v1"
@@ -96,23 +96,23 @@ async def randomGif(context, *, query):
         response = requests.get(search_url, params=search_params).json()
         gifs = [item["link"] for item in response.get("items", [])]
         if not gifs:
-            await context.send("No GIFs found.")
+            await ctx.send("No GIFs found.")
         else:
             gif_url = random.choice(gifs)
             embed = discord.Embed(title=f"Here's a {query} GIF for you!", color=MESSAGE_COLOR)
             embed.set_image(url=gif_url)
             embed.set_footer(text=f'{gifs.index(gif_url) + 1} of {len(gifs)}')
-            await context.reply(embed=embed)
+            await ctx.reply(embed=embed)
     except HttpError as error:
         if error.resp.status == 429:
-            await context.reply("Too many requests today. Please try again later.")
+            await ctx.reply("Too many requests today. Please try again later.")
         else:
             raise error
 
 
-@client.command(aliases=["video"])
-async def randomVideo(context, *, query):
-    if context.channel.id != CHANNEL_ID:
+@bot.command()
+async def video(ctx, *, query):
+    if ctx.channel.id != CHANNEL_ID:
         return
     try:
         search_params = {
@@ -125,7 +125,7 @@ async def randomVideo(context, *, query):
         results = youtube.search().list(**search_params).execute()
         videos = [item["id"]["videoId"] for item in results["items"] if item["id"]["kind"] == "youtube#video"]
         if not videos:
-            await context.send("No videos found.")
+            await ctx.send("No videos found.")
         else:
             video_id = random.choice(videos)
             video_url = f"https://www.youtube.com/watch?v={video_id}"
@@ -133,20 +133,20 @@ async def randomVideo(context, *, query):
             embed.add_field(name="Video URL", value=video_url, inline=False)
             embed.set_image(url=f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg")
             embed.set_footer(text=f'{videos.index(video_id) + 1} of {len(videos)}')
-            await context.reply(embed=embed)
+            await ctx.reply(embed=embed)
     except HttpError as error:
         if error.resp.status == 429:
-            await context.reply("Too many requests today. Please try again later.")
+            await ctx.reply("Too many requests today. Please try again later.")
         else:
             raise error
 
 
-@client.command(aliases=["play"])
-async def playSong(context, *, query):
+@bot.command()
+async def play(ctx, *, query):
     try:
-        voice_state = context.author.voice
+        voice_state = ctx.author.voice
         if not voice_state or not voice_state.channel:
-            await context.reply("You need to be in a voice channel to use this command.")
+            await ctx.reply("You need to be in a voice channel to use this command.")
             return
         ydl_opts = {'format': 'bestaudio'}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -154,14 +154,14 @@ async def playSong(context, *, query):
             if 'entries' in info:
                 info = info['entries'][0]
             url = info['url']
-        if context.guild.voice_client is None:
+        if ctx.guild.voice_client is None:
             voice_client = await voice_state.channel.connect()
         source = discord.FFmpegPCMAudio(url)
         voice_client.play(source)
         embed = discord.Embed(title=info['title'], url=info['webpage_url'], color=MESSAGE_COLOR)
         embed.set_thumbnail(url=info['thumbnail'])
         embed.add_field(name="Duration", value=humanize.naturaldelta(datetime.timedelta(seconds=info['duration'])), inline=False)
-        await context.reply(embed=embed)
+        await ctx.reply(embed=embed)
         while voice_client.is_playing():
             await asyncio.sleep(1)
         await voice_client.disconnect()
@@ -169,26 +169,44 @@ async def playSong(context, *, query):
         raise error
 
 
-@client.command(aliases=["stop"])
-async def stopSong(context):
-    voice_state = context.author.voice
+@bot.command()
+async def stop(ctx):
+    voice_state = ctx.author.voice
     if not voice_state or not voice_state.channel:
-        await context.reply("You need to be in a voice channel to use this command.")
+        await ctx.reply("You need to be in a voice channel to use this command.")
         return
-    voice_client = context.guild.voice_client
+    voice_client = ctx.guild.voice_client
     if voice_client.is_playing():
         voice_client.stop()
-        await context.reply("Stopped playing the current song.")
+        await ctx.reply("Stopped playing the current song.")
     else:
-        await context.reply("I am not playing any songs right now.")
+        await ctx.reply("I am not playing any songs right now.")
 
 
-async def ask_ai(prompt):
+@bot.command()
+async def ask(ctx, *, query):
+    asyncio.create_task(background_task(query, ctx))
+
+
+@bot.command()
+async def bothelp(ctx):
+    help_embed = discord.Embed(title="Bot Commands", color=MESSAGE_COLOR)
+    help_embed.add_field(name="/image <image query>", value="Get a random image based on the search query.", inline=False)
+    help_embed.add_field(name="/gif <gif query>", value="Get a random GIF based on the search query.", inline=False)
+    help_embed.add_field(name="/video <video query>", value="Get a random video based on the search query.", inline=False)
+    help_embed.add_field(name="/play <song name or URL>", value="Play a song in the voice channel.", inline=False)
+    help_embed.add_field(name="/stop", value="Stop playing the current song.", inline=False)
+    help_embed.add_field(name="/ask <chat query>", value="Talk to an AI.", inline=False)
+    help_embed.add_field(name="/bothelp", value="Show a list of all the bot commands.", inline=False)
+    await ctx.reply(embed=help_embed)
+
+
+async def ask_ai(query):
     try:
         openai.api_key = OPENAI_API_KEY
         response = await asyncio.to_thread(openai.Completion.create,
             engine="davinci",
-            prompt=f"Q: {prompt}\nA:",
+            query=f"Q: {query}\nA:",
             temperature=0.5,
             max_tokens=100,
             n=1,
@@ -208,73 +226,29 @@ async def ask_ai(prompt):
             raise error
 
 
-async def background_task(prompt, context):
-    answer = await ask_ai(prompt)
-    await context.reply(answer)
+async def background_task(query, ctx):
+    answer = await ask_ai(query)
+    await ctx.reply(answer)
 
 
-@client.command(aliases=["ask"])
-async def askAI(context, *, prompt):
-    asyncio.create_task(background_task(prompt, context))
+async def keep_alive():
+    while True:
+        try:
+            openai.api_key = OPENAI_API_KEY
+            response = openai.Completion.create(
+                engine="davinci",
+                query="ping",
+                max_tokens=1,
+                n=1,
+                stop=None,
+                temperature=0.5
+            )
+            if response.choices[0].text.strip() == "pong":
+                print("OpenAI API connection is live!")
+        except Exception as e:
+            print(f"OpenAI API connection failed with error: {str(e)}")
+        await asyncio.sleep(300)
 
 
-@client.command(aliases=["oracle"])
-async def magic8Ball(context):
-    if context.channel.id != CHANNEL_ID:
-        return
-    responses = [
-        "It is certain",
-        "Without a doubt",
-        "You may rely on it",
-        "Yes, definitely",
-        "It is decidedly so",
-        "As I see it, yes",
-        "Most likely",
-        "Yes",
-        "Outlook good",
-        "Signs point to yes",
-        "Reply hazy, try again",
-        "Better not tell you now",
-        "Ask again later",
-        "Cannot predict now",
-        "Concentrate and ask again",
-        "Don't count on it",
-        "Outlook not so good",
-        "My sources say no",
-        "Very doubtful",
-        "My reply is no"
-    ]
-    message = random.choice(responses)
-    await context.reply(message)
-
-
-@client.command(aliases=["bothelp"])
-async def botHelp(context):
-    help_embed = discord.Embed(title="Bot Commands", color=MESSAGE_COLOR)
-    help_embed.add_field(name="/image <image prompt>", value="Get a random image based on the search prompt.", inline=False)
-    help_embed.add_field(name="/gif <gif prompt>", value="Get a random GIF based on the search prompt.", inline=False)
-    help_embed.add_field(name="/video <video prompt>", value="Get a random video based on the search prompt.", inline=False)
-    help_embed.add_field(name="/play <song name or URL>", value="Play a song in the voice channel.", inline=False)
-    help_embed.add_field(name="/stop", value="Stop playing the current song.", inline=False)
-    help_embed.add_field(name="/ask <chat prompt>", value="Talk to an AI.", inline=False)
-    help_embed.add_field(name="/oracle <question>", value="Get a question answered by the oracle.", inline=False)
-    help_embed.add_field(name="/help", value="Show a list of all the bot commands.", inline=False)
-    await context.reply(embed=help_embed)
-
-
-@client.event
-async def on_command(context):
-    if context.message.channel.id != CHANNEL_ID:
-        print(f"Command '{context.message.content}' was not in the allowed channel.")
-    else:
-        print(f"Command used by {context.author.name}: {context.message.content}")
-
-
-@client.event
-async def on_command_error(context, error):
-    if isinstance(error, commands.CommandNotFound):
-        await context.reply("Invalid command.")
-    else:
-        await context.reply(f"An unhandled error occurred: {error}")
-
-client.run(DISCORD_BOT_TOKEN)
+bot.add_cog(Music(bot))
+bot.run(DISCORD_BOT_TOKEN)
