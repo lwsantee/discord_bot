@@ -10,28 +10,37 @@ import requests
 import openai
 import yt_dlp as youtube_dl
 
+# set the intents for the bot
 intents = discord.Intents.default()
 intents.message_content = True
+# create the bot with '/' as the prefix for commands
 bot = commands.Bot(command_prefix="/", intents=intents)
 
+# keys and secrets
 DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.GwtksM.aq6av9XoWi1Uy7-VCx8Y14wQV0ge99fXvTGbyQ'
 GOOGLE_API_KEY = 'AIzaSyCUeJzbNBJ3L1LusiIzeZbW69-nWk4ejH8'
 CX = '551d46812ea734e0f'
 OPENAI_API_KEY = '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'
+
+# other constants
 CHANNEL_ID = 1096284252125012068
 MESSAGE_COLOR = 0xFF5733
 
 
 @bot.event
 async def on_ready():
+    # inform the server that the bot is online
     print("CrisisBot is online!")
     channel = bot.get_channel(CHANNEL_ID)
     await channel.send("CrisisBot is online!")
+    # begin the openai keep alive function
     asyncio.create_task(keep_openai_alive())
 
 
 @bot.event
 async def on_command(ctx):
+    # if the message was not in the allowed channel, log it
+    # else log the command and who made it
     if ctx.message.channel.id != CHANNEL_ID:
         print(
             f"Command '{ctx.message.content}' was not in the allowed channel.")
@@ -41,18 +50,26 @@ async def on_command(ctx):
 
 @bot.event
 async def on_command_error(ctx, error):
+    # if the error is a command not found, inform the user
     if isinstance(error, commands.CommandNotFound):
         await ctx.reply("Invalid command.")
+    # else if the error is an HTTP error
     elif isinstance(error, HttpError):
+        # if the error is a 429, inform the user
+        # else display the error
         if error.resp.status == 429:
             await ctx.reply("Too many requests today. Please try again later.")
         else:
             await ctx.reply(f"An unhandled HTTP error occurred: {error}")
+    # else if the error is an open ai error
     elif isinstance(error, openai.error.APIError):
+        # if the error is a 429, inform the user
+        # else display the error
         if error.status == 429:
             return "Too many requests have been made. Please try again later."
         else:
             await ctx.reply(f"An unhandled OpenAI error occurred: {error}")
+    # else display the unhandled error
     else:
         await ctx.reply(f"An unhandled error occurred: {error}")
 
@@ -60,6 +77,7 @@ async def on_command_error(ctx, error):
 @bot.command()
 async def image(ctx, *, query):
     try:
+        # set the search url and the params for the search
         search_url = "https://www.googleapis.com/customsearch/v1"
         search_params = {
             "q": query,
@@ -68,12 +86,16 @@ async def image(ctx, *, query):
             "key": GOOGLE_API_KEY,
             "num": 10
         }
+        # get the response from the url
         response = requests.get(search_url, params=search_params).json()
         images = [item["link"] for item in response.get("items", [])]
+        # if there were no images found, inform the user
         if not images:
             await ctx.send("No images found.")
         else:
+            # chose a random image from the results
             image_url = random.choice(images)
+            # create and return the embed
             embed = discord.Embed(
                 title=f"Here's a {query} image for you!", color=MESSAGE_COLOR)
             embed.set_image(url=image_url)
@@ -87,6 +109,7 @@ async def image(ctx, *, query):
 @bot.command()
 async def gif(ctx, *, query):
     try:
+        # set the search url and the params for the search
         search_url = "https://www.googleapis.com/customsearch/v1"
         search_params = {
             "q": query,
@@ -96,12 +119,16 @@ async def gif(ctx, *, query):
             "key": GOOGLE_API_KEY,
             "num": 10
         }
+        # get the response from the url
         response = requests.get(search_url, params=search_params).json()
         gifs = [item["link"] for item in response.get("items", [])]
+        # if there were no gifs found, inform the user
         if not gifs:
             await ctx.send("No GIFs found.")
         else:
+            # chose a random image from the results
             gif_url = random.choice(gifs)
+            # create and return the embed
             embed = discord.Embed(
                 title=f"Here's a {query} GIF for you!", color=MESSAGE_COLOR)
             embed.set_image(url=gif_url)
@@ -114,22 +141,27 @@ async def gif(ctx, *, query):
 @bot.command()
 async def video(ctx, *, query):
     try:
+        # set the params for the search
         search_params = {
             "q": query,
             "type": "video",
             "part": "id",
             "maxResults": 50
         }
+        # get the response from the url
         youtube = googleapiclient.discovery.build(
             "youtube", "v3", developerKey=GOOGLE_API_KEY)
         results = youtube.search().list(**search_params).execute()
         videos = [item["id"]["videoId"] for item in results["items"]
                   if item["id"]["kind"] == "youtube#video"]
+        # if there were no videos found, inform the user
         if not videos:
             await ctx.send("No videos found.")
         else:
+            # chose a random video from the results
             video_id = random.choice(videos)
             video_url = f"https://www.youtube.com/watch?v={video_id}"
+            # create and return the embed
             embed = discord.Embed(
                 title=f"Here's a {query} video for you!", color=MESSAGE_COLOR)
             embed.add_field(name="Video URL", value=video_url, inline=False)
@@ -146,6 +178,7 @@ async def video(ctx, *, query):
 async def play(ctx, *, query):
     try:
         voice_state = ctx.author.voice
+        # if the user is not in a voice channel, inform them they need to be and exit
         if not voice_state or not voice_state.channel:
             await ctx.reply("You need to be in a voice channel to use this command.")
             return
@@ -176,13 +209,16 @@ async def play(ctx, *, query):
 async def stop(ctx):
     try:
         voice_state = ctx.author.voice
+        # if the user is not in a voice channel, inform them they need to be and exit
         if not voice_state or not voice_state.channel:
             await ctx.reply("You need to be in a voice channel to use this command.")
             return
         voice_client = ctx.guild.voice_client
+        # if the bot is playing music, stop playing and inform the user
         if voice_client.is_playing():
             voice_client.stop()
             await ctx.reply("Stopped playing the current song.")
+        # else inform the user that there are no songs playing
         else:
             await ctx.reply("I am not playing any songs right now.")
     except Exception as error:
@@ -259,5 +295,5 @@ async def keep_openai_alive():
             print(f"OpenAI API connection failed with error: {str(error)}")
         await asyncio.sleep(300)
 
-
+# run the bot
 bot.run(DISCORD_BOT_TOKEN)
