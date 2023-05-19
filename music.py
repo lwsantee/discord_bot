@@ -70,7 +70,7 @@ async def stop_music(ctx, queue):
 
 
 # Method to skip the current song and play the next song in the queue
-async def skip_song(ctx, queue):
+async def skip_song(ctx):
     try:
         # Get the voice state of the user
         voice_state = ctx.author.voice
@@ -85,9 +85,8 @@ async def skip_song(ctx, queue):
             if voice_client.is_playing():
                 voice_client.stop()
                 await ctx.reply("Skipped the current song.")
-                await play_next(ctx, queue=queue)
-            else:
-                await ctx.reply("I am not playing any songs right now.")
+        else:
+            await ctx.reply("I am not playing any songs right now.")
     except Exception as error:
         raise error
 
