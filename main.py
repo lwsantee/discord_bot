@@ -102,7 +102,7 @@ async def stop(ctx):
 
 @bot.command()
 async def skip(ctx):
-    await skip_song(ctx, queue=VOICE_QUEUE)
+    await skip_song(ctx)
 
 
 @bot.command()
