@@ -165,6 +165,11 @@ async def play_next(ctx, queue):
 # Method to clear the queue
 async def clear_queue(ctx, queue):
     try:
+        # Check if the author is in a voice channel
+        voice_state = ctx.author.voice
+        if not voice_state or not voice_state.channel:
+            await ctx.reply("You need to be in a voice channel to use this command.")
+            return
         if len(queue) != 0:
             queue.clear()
             await ctx.reply("Cleared the queue.")
