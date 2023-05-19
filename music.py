@@ -86,8 +86,8 @@ async def skip_song(ctx, queue):
                 voice_client.stop()
                 await ctx.reply("Skipped the current song.")
                 await play_next(ctx, queue=queue)
-                return
-        await ctx.reply("I am not playing any songs right now.")
+            else:
+                await ctx.reply("I am not playing any songs right now.")
     except Exception as error:
         raise error
 
@@ -144,8 +144,10 @@ async def play_next(ctx, queue):
         # Check if the queue is empty
         if len(queue) == 0:
             # If the queue is empty, send a reply and disconnect the voice client
-            await ctx.reply("There are no songs in the queue to play, disconnecting.")
-            await voice_client.disconnect()
+            if voice_client is not None:
+                await ctx.reply("There are no songs in the queue to play, disconnecting.")
+                await voice_client.disconnect()
+            return
         else:
             # Stop the voice client from playing any audio
             voice_client.stop()
@@ -155,10 +157,8 @@ async def play_next(ctx, queue):
             # Wait until the voice client finishes playing the audio
             while voice_client.is_playing():
                 await asyncio.sleep(1)
-            # Check if there are more songs in the queue
-            if len(queue) != 0:
-                # If there are more songs, recursively call the function to play the next one
-                await play_next(ctx, queue)
+            # Recursively call the function to play the next song
+            await play_next(ctx, queue)
     except Exception as error:
         raise error
 
