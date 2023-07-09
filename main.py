@@ -1,9 +1,8 @@
+import traceback
 import discord
 from discord.ext import commands
 from googleapiclient.errors import HttpError
-import openai
 from media import *
-from chat import *
 from music import *
 
 # Set the intents for the bot
@@ -16,7 +15,6 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.GwtksM.aq6av9XoWi1Uy7-VCx8Y14wQV0ge99fXvTGbyQ'
 GOOGLE_API_KEY = 'AIzaSyCUeJzbNBJ3L1LusiIzeZbW69-nWk4ejH8'
 CX = '551d46812ea734e0f'
-OPENAI_API_KEY = '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'
 
 # Other constants
 CHANNEL_ID = 1096284252125012068
@@ -26,26 +24,19 @@ VOICE_QUEUE = []
 @bot.event
 async def on_ready():
     # Inform the server that the bot is online
-    print("CrisisBot is online!")
     channel = bot.get_channel(CHANNEL_ID)
     await channel.send("CrisisBot is online!")
-    # Begin the OpenAI keep alive function
-    asyncio.create_task(keep_openai_alive(OPENAI_API_KEY))
-
-
-@bot.event
-async def on_command(ctx):
-    # If the message was not in the allowed channel, log it
-    # Else log the command and who made it
-    if ctx.message.channel.id != CHANNEL_ID:
-        print(
-            f"Command '{ctx.message.content}' was not in the allowed channel.")
-    else:
-        print(f"Command used by {ctx.author.name}: {ctx.message.content}")
 
 
 @bot.event
 async def on_command_error(ctx, error):
+    # Format the log message
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_message = f'Timestamp: {timestamp}\nUser Input: {ctx.message}\nError: {error}\n{traceback.format_exc()}\n'
+    # Log the message in the errorlog.txt file
+    with open('errorlog.txt', 'a') as log_file:
+        log_file.write(log_message)
+
     # If the error is a command not found, inform the user
     if isinstance(error, commands.CommandNotFound):
         await ctx.reply("Invalid command.")
@@ -57,14 +48,6 @@ async def on_command_error(ctx, error):
             await ctx.reply("Too many requests today. Please try again later.")
         else:
             await ctx.reply(f"An unhandled HTTP error occurred: {error}")
-    # Else if the error is an OpenAI error
-    elif isinstance(error, openai.error.APIError):
-        # If the error is a 429, inform the user
-        # Else display the error
-        if error.status == 429:
-            return "Too many requests have been made. Please try again later."
-        else:
-            await ctx.reply(f"An unhandled OpenAI error occurred: {error}")
     # Else display the unhandled error
     else:
         await ctx.reply(f"An unhandled error occurred: {error}")
@@ -83,11 +66,6 @@ async def gif(ctx, *, query):
 @bot.command()
 async def video(ctx, *, query):
     await video_search(ctx, query=query, GOOGLE_API_KEY=GOOGLE_API_KEY)
-
-
-@bot.command()
-async def chat(ctx, *, query):
-    await chat_bot(ctx, query=query, OPENAI_API_KEY=OPENAI_API_KEY)
 
 
 @bot.command()
@@ -135,8 +113,6 @@ async def bothelp(ctx):
         name="/skip", value="Skip the current song.", inline=False)
     help_embed.add_field(
         name="/clear", value="Clear the song queue.", inline=False)
-    help_embed.add_field(name="/chat <AI chat query>",
-                         value="Talk to an AI.", inline=False)
     help_embed.add_field(
         name="/bothelp", value="Show a list of all the bot commands.", inline=False)
     await ctx.reply(embed=help_embed)

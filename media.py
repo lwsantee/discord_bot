@@ -22,7 +22,7 @@ async def image_search(ctx, *, query, CX, GOOGLE_API_KEY):
         images = [item["link"] for item in response.get("items", [])]
         # If no images were found, inform the user
         if not images:
-            await ctx.send("No images found.")
+            await ctx.reply("No images found.")
         else:
             # Choose a random image from the results
             image_url = random.choice(images)
@@ -56,7 +56,7 @@ async def gif_search(ctx, *, query, CX, GOOGLE_API_KEY):
         gifs = [item["link"] for item in response.get("items", [])]
         # If no GIFs were found, inform the user
         if not gifs:
-            await ctx.send("No GIFs found.")
+            await ctx.reply("No GIFs found.")
         else:
             # Choose a random GIF from the results
             gif_url = random.choice(gifs)
@@ -89,7 +89,7 @@ async def video_search(ctx, *, query, GOOGLE_API_KEY):
                   if item["id"]["kind"] == "youtube#video"]
         # If no videos were found, inform the user
         if not videos:
-            await ctx.send("No videos found.")
+            await ctx.reply("No videos found.")
         else:
             # Choose a random video from the results
             video_id = random.choice(videos)
