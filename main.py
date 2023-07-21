@@ -12,7 +12,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="/", intents=intents)
 
 # Keys and secrets
-DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.GwtksM.aq6av9XoWi1Uy7-VCx8Y14wQV0ge99fXvTGbyQ'
+DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.Gz6BPj.Hz9ocMZs7vwJlDJpfBVNGSOBofh3AyxuqsGULc'
 GOOGLE_API_KEY = 'AIzaSyCUeJzbNBJ3L1LusiIzeZbW69-nWk4ejH8'
 CX = '551d46812ea734e0f'
 
