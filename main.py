@@ -97,24 +97,24 @@ async def clear(ctx):
 async def bothelp(ctx):
     help_embed = discord.Embed(
         title="Bot Commands", color=discord.Color.blurple())
-    help_embed.add_field(name="/image <image query>",
+    help_embed.add_field(name=".image <image query>",
                          value="Get a random image based on the search query.", inline=False)
-    help_embed.add_field(name="/gif <gif query>",
+    help_embed.add_field(name=".gif <gif query>",
                          value="Get a random GIF based on the search query.", inline=False)
-    help_embed.add_field(name="/video <video query>",
+    help_embed.add_field(name=".video <video query>",
                          value="Get a random video based on the search query.", inline=False)
-    help_embed.add_field(name="/play <song name or URL>",
+    help_embed.add_field(name=".play <song name or URL>",
                          value="Play a song in the voice channel.", inline=False)
     help_embed.add_field(
-        name="/stop", value="Stop playing the current song.", inline=False)
-    help_embed.add_field(name="/queue <song name or URL>",
+        name=".stop", value="Stop playing the current song.", inline=False)
+    help_embed.add_field(name=".queue <song name or URL>",
                          value="Queue a song to play next.", inline=False)
     help_embed.add_field(
-        name="/skip", value="Skip the current song.", inline=False)
+        name=".skip", value="Skip the current song.", inline=False)
     help_embed.add_field(
-        name="/clear", value="Clear the song queue.", inline=False)
+        name=".clear", value="Clear the song queue.", inline=False)
     help_embed.add_field(
-        name="/bothelp", value="Show a list of all the bot commands.", inline=False)
+        name=".bothelp", value="Show a list of all the bot commands.", inline=False)
     await ctx.reply(embed=help_embed)
 
 
