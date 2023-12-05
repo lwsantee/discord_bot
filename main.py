@@ -94,7 +94,7 @@ async def clear(ctx):
 
 
 @bot.command()
-async def help(ctx):
+async def bothelp(ctx):
     help_embed = discord.Embed(
         title="Bot Commands", color=discord.Color.blurple())
     help_embed.add_field(name="/image <image query>",
