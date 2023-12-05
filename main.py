@@ -114,7 +114,7 @@ async def help(ctx):
     help_embed.add_field(
         name="/clear", value="Clear the song queue.", inline=False)
     help_embed.add_field(
-        name="/help", value="Show a list of all the bot commands.", inline=False)
+        name="/bothelp", value="Show a list of all the bot commands.", inline=False)
     await ctx.reply(embed=help_embed)
 
 
