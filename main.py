@@ -9,7 +9,7 @@ from music import *
 intents = discord.Intents.default()
 intents.message_content = True
 # Create the bot with '/' as the prefix for commands
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix=".", intents=intents)
 
 # Keys and secrets
 DISCORD_BOT_TOKEN = 'MTA5NjE2NDM3OTE4MDk0MTM4Mw.Gz6BPj.Hz9ocMZs7vwJlDJpfBVNGSOBofh3AyxuqsGULc'
@@ -94,7 +94,7 @@ async def clear(ctx):
 
 
 @bot.command()
-async def bothelp(ctx):
+async def help(ctx):
     help_embed = discord.Embed(
         title="Bot Commands", color=discord.Color.blurple())
     help_embed.add_field(name="/image <image query>",
@@ -114,7 +114,7 @@ async def bothelp(ctx):
     help_embed.add_field(
         name="/clear", value="Clear the song queue.", inline=False)
     help_embed.add_field(
-        name="/bothelp", value="Show a list of all the bot commands.", inline=False)
+        name="/help", value="Show a list of all the bot commands.", inline=False)
     await ctx.reply(embed=help_embed)
 
 
