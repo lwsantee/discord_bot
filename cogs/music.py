@@ -95,7 +95,7 @@ class Music(commands.Cog):
         """
         await self.add_to_queue(ctx, query)  # Add song to the queue
         voice_client = ctx.guild.voice_client
-        if not voice_client.is_playing():  # If nothing is playing, start playing
+        if voice_client and not voice_client.is_playing():  # If nothing is playing, start playing
             await self.play_next(ctx)
 
     @commands.command()
@@ -124,7 +124,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
             if voice_client.is_playing():
-                voice_client.stop()
+                voice_client.pause()
                 await ctx.reply("Skipped the current song.")
                 await self.play_next(ctx)
         else:
