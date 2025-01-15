@@ -124,7 +124,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
             if voice_client.is_playing():
-                voice_client.stop()
+                voice_client.pause()
                 await ctx.reply("Skipped the current song.")
                 await self.play_next(ctx)
         else:
