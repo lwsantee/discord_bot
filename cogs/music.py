@@ -6,6 +6,7 @@ import yt_dlp as youtube_dl
 from discord.ext import commands
 
 # FFmpeg options to be used with discord.FFmpegPCMAudio
+# FFMPEG_OPTIONS = {"options": "-vn -filter_complex \"[0:a]apad=pad_dur=5\""}  # Adds 5 seconds of silence to the end of each song
 FFMPEG_OPTIONS = {"options": "-vn"}
 
 
@@ -31,7 +32,7 @@ class Music(commands.Cog):
         Adds a song to the queue.
         """
         await self.join_voice_channel(ctx)  # Ensure bot is in a voice channel
-        ydl_opts = {"format": "bestaudio/best"}
+        ydl_opts = {"format": "bestaudio/best", "geo-bypass": True}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"ytsearch:{query}", download=False)
             if "entries" in info:
