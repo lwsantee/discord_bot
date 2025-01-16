@@ -32,7 +32,7 @@ class Music(commands.Cog):
         Adds a song to the queue.
         """
         await self.join_voice_channel(ctx)  # Ensure bot is in a voice channel
-        ydl_opts = {"format": "bestaudio/best", "geo-bypass": True}
+        ydl_opts = {"format": "bestaudio/best", "geo-bypass": True, "rm-cache-dir": True}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"ytsearch:{query}", download=False)
             if "entries" in info:
