@@ -31,16 +31,20 @@ class Music(commands.Cog):
         """
         Adds a song to the queue.
         """
+
         await self.join_voice_channel(ctx)  # Ensure bot is in a voice channel
         ydl_opts = {"format": "bestaudio/best", "geo-bypass": True, "rm-cache-dir": True}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"ytsearch:{query}", download=False)
-            if "entries" in info:
+            if info and "entries" in info and len(info["entries"]) > 0 and "url" in info["entries"][0]:
                 info = info["entries"][0]  # Get the first search result
-            url = info["url"]
+                print(f"Found media url: {info['url']}")
+            else:
+                print(f"Got an unexpected result from YouTube search. Query: {query}. Response: {info}")
+                await ctx.reply(f"No results found for \"{query}\"")
+                return 
 
-        source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)  # Create audio source
-        self.queue.append((source, info))  # Add source and info to queue
+        self.queue.append(info)
         await self.send_now_playing(ctx, info)  # Send now playing message
 
     async def send_now_playing(self, ctx, info):
@@ -71,7 +75,7 @@ class Music(commands.Cog):
                 await voice_client.disconnect()
             return
         else:
-            source, info = self.queue.pop(0)  # Get the next song from the queue
+            info = self.queue.pop(0)  # Get the next song from the queue
 
             def after_playing(error):
                 """
@@ -86,6 +90,8 @@ class Music(commands.Cog):
                 except Exception as e:
                     print(f"Error in after_playing: {e}")
 
+            # Create an ffmpeg subprocess to stream the audio from the url provided by youtube search
+            source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)  
             voice_client.play(source, after=after_playing)  # Play the current song
             await self.send_now_playing(ctx, info)  # Send now playing message
 
