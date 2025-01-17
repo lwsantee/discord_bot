@@ -220,7 +220,7 @@ class Music(commands.Cog):
         """
         Displays the current queue.
         """
-        print(self.queue)
+        await ctx.reply(self.queue)
 
 # Function to set up the Music cog
 async def setup(client):
