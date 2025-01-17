@@ -14,6 +14,8 @@ class Music(commands.Cog):
     def __init__(self, client):
         self.client = client  # Discord bot client
         self.queue = []  # Queue to store songs to be played
+        self.history = [] # List of previously played songs
+        self.currently_playing = None # The currently playing song
 
     async def join_voice_channel(self, ctx):
         """
@@ -31,7 +33,6 @@ class Music(commands.Cog):
         """
         Adds a song to the queue.
         """
-
         await self.join_voice_channel(ctx)  # Ensure bot is in a voice channel
         ydl_opts = {"format": "bestaudio/best", "geo-bypass": True, "rm-cache-dir": True}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -76,6 +77,8 @@ class Music(commands.Cog):
             return
         else:
             info = self.queue.pop(0)  # Get the next song from the queue
+            self.history.append(info) # Add the next song to the history
+            self.currently_playing = info # Set the currently playing song to the next song
 
             def after_playing(error):
                 """
@@ -163,7 +166,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
             voice_client.pause()
-            await ctx.reply("Pausing playback")
+            await ctx.reply("Pausing playback.")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -175,10 +178,18 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_paused():
             voice_client.resume()
-            await ctx.reply("Resuming playback")
+            await ctx.reply("Resuming playback.")
         else:
-            await ctx.reply("Not paused")
+            await ctx.reply("Not paused.")
 
+    @commands.command()
+    async def back(self, ctx):
+        """
+        Returns to the previous song in the playback.
+        """
+        self.queue.insert(0, self.currently_playing)
+        self.queue.insert(0, self.history.pop())
+        await self.play_next(ctx)
 
 # Function to set up the Music cog
 async def setup(client):
