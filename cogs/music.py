@@ -85,7 +85,7 @@ class Music(commands.Cog):
                 """
                 if error:
                     print(f"Error occurred: {error}")
-                self.history.append(info) # Add the next song to the history
+                self.history.append(self.currently_playing) # Add the next song to the history
                 self.currently_playing = None # Clear the currently playing song
                 coro = self.play_next(ctx)  # Schedule playing the next song
                 fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
@@ -137,6 +137,7 @@ class Music(commands.Cog):
             if voice_client.is_playing():
                 voice_client.pause()
                 await ctx.reply("Skipped the current song.")
+                self.history.append(self.currently_playing)
                 await self.play_next(ctx)
         else:
             await ctx.reply("I am not playing any songs right now.")
