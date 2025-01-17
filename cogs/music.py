@@ -216,11 +216,24 @@ class Music(commands.Cog):
             await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
-    async def display(self, ctx):
+    async def displayqueue(self, ctx):
         """
         Displays the current queue.
         """
-        await ctx.reply(self.queue)
+        message = []
+        for item in self.queue:
+            message.append(item["title"])
+        await ctx.reply(str(message))
+        
+    @commands.command()
+    async def displayhistory(self, ctx):
+        """
+        Displays the current history.
+        """
+        message = []
+        for item in self.history:
+            message.append(item["title"])
+        await ctx.reply(str(message))
 
 # Function to set up the Music cog
 async def setup(client):
