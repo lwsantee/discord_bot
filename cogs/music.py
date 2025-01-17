@@ -125,6 +125,7 @@ class Music(commands.Cog):
             else:
                 await voice_client.disconnect()
                 self.queue.clear()
+                self.history.clear()
         await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
@@ -213,6 +214,13 @@ class Music(commands.Cog):
             await self.play_next(ctx)
         else:
             await ctx.reply("I am not playing any songs right now.")
+
+    @commands.command()
+    async def display(self, ctx):
+        """
+        Displays the current queue.
+        """
+        print(self.queue)
 
 # Function to set up the Music cog
 async def setup(client):
