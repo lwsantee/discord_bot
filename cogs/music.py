@@ -201,6 +201,19 @@ class Music(commands.Cog):
         else:
             await ctx.reply("I am not playing any songs right now.")
 
+    @commands.command()
+    async def rewind(self, ctx):
+        """
+        Returns to the start of the current song in the playback.
+        """
+        voice_client = ctx.guild.voice_client
+        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
+            voice_client.pause()
+            self.queue.insert(0, self.currently_playing)
+            await self.play_next(ctx)
+        else:
+            await ctx.reply("I am not playing any songs right now.")
+
 # Function to set up the Music cog
 async def setup(client):
     await client.add_cog(Music(client))
