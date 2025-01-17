@@ -77,7 +77,6 @@ class Music(commands.Cog):
             return
         else:
             info = self.queue.pop(0)  # Get the next song from the queue
-            self.history.append(info) # Add the next song to the history
             self.currently_playing = info # Set the currently playing song to the next song
 
             def after_playing(error):
@@ -86,6 +85,8 @@ class Music(commands.Cog):
                 """
                 if error:
                     print(f"Error occurred: {error}")
+                self.history.append(info) # Add the next song to the history
+                self.currently_playing = None # Clear the currently playing song
                 coro = self.play_next(ctx)  # Schedule playing the next song
                 fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
                 try:
