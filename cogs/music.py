@@ -155,6 +155,30 @@ class Music(commands.Cog):
         else:
             await ctx.reply("Nothing in the queue to clear.")
 
+    @commands.command()
+    async def pause(self, ctx):
+        """
+        Pause the current song.
+        """
+        voice_client = ctx.guild.voice_client
+        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
+            voice_client.pause()
+            await ctx.reply("Pausing playback")
+        else:
+            await ctx.reply("I am not playing any songs right now.")
+
+    @commands.command()
+    async def resume(self, ctx):
+        """
+        Resume playback.
+        """
+        voice_client = ctx.guild.voice_client
+        if voice_client and voice_client.is_paused():
+            voice_client.resume()
+            await ctx.reply("Resuming playback")
+        else:
+            await ctx.reply("Not paused")
+
 
 # Function to set up the Music cog
 async def setup(client):
