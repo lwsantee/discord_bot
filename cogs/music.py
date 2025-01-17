@@ -13,8 +13,8 @@ FFMPEG_OPTIONS = {"options": "-vn"}
 class Music(commands.Cog):
     def __init__(self, client):
         self.client = client  # Discord bot client
-        self.queue = []  # Queue to store songs to be played
-        self.history = [] # List of previously played songs
+        self.song_queue = []  # Queue to store songs to be played
+        self.song_history = [] # List of previously played songs
         self.currently_playing = None # The currently playing song
 
     async def join_voice_channel(self, ctx):
@@ -45,7 +45,7 @@ class Music(commands.Cog):
                 await ctx.reply(f"No results found for \"{query}\"")
                 return 
 
-        self.queue.append(info)
+        self.song_queue.append(info)
         await self.send_now_playing(ctx, info)  # Send now playing message
 
     async def send_now_playing(self, ctx, info):
@@ -68,7 +68,7 @@ class Music(commands.Cog):
         Plays the next song in the queue.
         """
         voice_client = ctx.guild.voice_client
-        if len(self.queue) == 0:
+        if len(self.song_queue) == 0:
             if voice_client is not None:
                 await ctx.reply(
                     "There are no songs in the queue to play, disconnecting."
@@ -76,7 +76,7 @@ class Music(commands.Cog):
                 await voice_client.disconnect()
             return
         else:
-            info = self.queue.pop(0)  # Get the next song from the queue
+            info = self.song_queue.pop(0)  # Get the next song from the queue
             self.currently_playing = info # Set the currently playing song to the next song
 
             def after_playing(error):
@@ -85,7 +85,7 @@ class Music(commands.Cog):
                 """
                 if error:
                     print(f"Error occurred: {error}")
-                self.history.append(self.currently_playing) # Add the next song to the history
+                self.song_history.append(self.currently_playing) # Add the next song to the history
                 self.currently_playing = None # Clear the currently playing song
                 coro = self.play_next(ctx)  # Schedule playing the next song
                 fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
@@ -102,7 +102,7 @@ class Music(commands.Cog):
     @commands.command()
     async def play(self, ctx, *, query):
         """
-        Play a song.
+        Play a song. Adds a song to the queue if one is already playing.
         """
         await self.add_to_queue(ctx, query)  # Add song to the queue
         voice_client = ctx.guild.voice_client
@@ -119,13 +119,13 @@ class Music(commands.Cog):
             if voice_client.is_playing():
                 voice_client.stop()
                 await voice_client.disconnect()
-                self.queue.clear()
+                self.song_queue.clear()
                 await ctx.reply("Stopped playing the current song, disconnecting.")
                 return
             else:
                 await voice_client.disconnect()
-                self.queue.clear()
-                self.history.clear()
+                self.song_queue.clear()
+                self.song_history.clear()
         await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
@@ -138,28 +138,27 @@ class Music(commands.Cog):
             if voice_client.is_playing():
                 voice_client.pause()
                 await ctx.reply("Skipped the current song.")
-                self.history.append(self.currently_playing)
+                self.song_history.append(self.currently_playing)
                 await self.play_next(ctx)
         else:
             await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
-    async def add(self, ctx, *, query):
+    async def back(self, ctx):
         """
-        Add a song to the queue.
+        Returns to the previous song in the playback.
         """
-        await self.add_to_queue(ctx, query)
-
-    @commands.command()
-    async def clear(self, ctx):
-        """
-        Clear the song queue.
-        """
-        if len(self.queue) != 0:
-            self.queue.clear()
-            await ctx.reply("Cleared the queue.")
+        voice_client = ctx.guild.voice_client
+        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
+            if len(self.song_history) > 0:
+                voice_client.pause()
+                self.song_queue.insert(0, self.currently_playing)
+                self.song_queue.insert(0, self.song_history.pop())
+                await self.play_next(ctx)
+            else:
+                await ctx.reply("No history before this song.")
         else:
-            await ctx.reply("Nothing in the queue to clear.")
+            await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
     async def pause(self, ctx):
@@ -186,23 +185,6 @@ class Music(commands.Cog):
             await ctx.reply("Not paused.")
 
     @commands.command()
-    async def back(self, ctx):
-        """
-        Returns to the previous song in the playback.
-        """
-        voice_client = ctx.guild.voice_client
-        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            if (len(self.history) > 0):
-                voice_client.pause()
-                self.queue.insert(0, self.currently_playing)
-                self.queue.insert(0, self.history.pop())
-                await self.play_next(ctx)
-            else:
-                await ctx.reply("No history before this song.")
-        else:
-            await ctx.reply("I am not playing any songs right now.")
-
-    @commands.command()
     async def rewind(self, ctx):
         """
         Returns to the start of the current song in the playback.
@@ -210,30 +192,68 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
             voice_client.pause()
-            self.queue.insert(0, self.currently_playing)
+            self.song_queue.insert(0, self.currently_playing)
             await self.play_next(ctx)
         else:
             await ctx.reply("I am not playing any songs right now.")
 
     @commands.command()
-    async def displayqueue(self, ctx):
+    async def clear(self, ctx):
+        """
+        Clear the song queue.
+        """
+        if len(self.song_queue) != 0:
+            self.song_queue.clear()
+            await ctx.reply("Cleared the queue.")
+        else:
+            await ctx.reply("Nothing in the queue to clear.")
+
+    @commands.command()
+    async def clearhistory(self, ctx):
+        """
+        Clear the song history (Should only be used for cleaning memory).
+        """
+        if len(self.song_history) != 0:
+            self.song_history.clear()
+            await ctx.reply("Cleared the history.")
+        else:
+            await ctx.reply("Nothing in the history to clear.")
+
+    @commands.command()
+    async def queue(self, ctx):
         """
         Displays the current queue.
         """
-        message = []
-        for item in self.queue:
-            message.append(item["title"])
-        await ctx.reply(str(message))
+        # Create the embed object
+        embed = discord.Embed(
+            title="Song Queue",
+            description="Here is the list of songs in the queue:",
+            color=discord.Color.blurple()
+        )
+        
+        # Add each song title as a new field
+        for index, song in enumerate(self.song_queue, start=1):
+            embed.add_field(name=f"Song {index}", value=song["title"], inline=False)
+
+        await ctx.send(embed=embed)
         
     @commands.command()
-    async def displayhistory(self, ctx):
+    async def history(self, ctx):
         """
         Displays the current history.
         """
-        message = []
-        for item in self.history:
-            message.append(item["title"])
-        await ctx.reply(str(message))
+        # Create the embed object
+        embed = discord.Embed(
+            title="Song History",
+            description="Here is the list of previously played songs:",
+            color=discord.Color.blurple()
+        )
+        
+        # Add each song title as a new field
+        for index, song in enumerate(self.song_history, start=1):
+            embed.add_field(name=f"Song {index}", value=song["title"], inline=False)
+
+        await ctx.send(embed=embed)
 
 # Function to set up the Music cog
 async def setup(client):
