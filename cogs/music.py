@@ -191,10 +191,13 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            voice_client.pause()
-            self.queue.insert(0, self.currently_playing)
-            self.queue.insert(0, self.history.pop())
-            await self.play_next(ctx)
+            if (len(self.history) > 0):
+                voice_client.pause()
+                self.queue.insert(0, self.currently_playing)
+                self.queue.insert(0, self.history.pop())
+                await self.play_next(ctx)
+            else:
+                await ctx.reply("No history before this song.")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
