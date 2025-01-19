@@ -46,7 +46,9 @@ class Music(commands.Cog):
                 return 
 
         self.song_queue.append(info)
-        await self.send_now_playing(ctx, info)  # Send now playing message
+
+        if self.currently_playing is not None:
+            await self.send_now_playing(ctx, info)  # Send now playing message
 
     async def send_now_playing(self, ctx, info):
         """
@@ -87,12 +89,13 @@ class Music(commands.Cog):
                     print(f"Error occurred: {error}")
                 self.song_history.append(self.currently_playing) # Add the next song to the history
                 self.currently_playing = None # Clear the currently playing song
-                coro = self.play_next(ctx)  # Schedule playing the next song
-                fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
-                try:
-                    fut.result()
-                except Exception as e:
-                    print(f"Error in after_playing: {e}")
+                if len(self.song_queue) > 0:
+                    coro = self.play_next(ctx)  # Schedule playing the next song
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+                    try:
+                        fut.result()
+                    except Exception as e:
+                        print(f"Error in after_playing: {e}")
 
             # Create an ffmpeg subprocess to stream the audio from the url provided by youtube search
             source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)  
@@ -139,7 +142,16 @@ class Music(commands.Cog):
                 voice_client.pause()
                 await ctx.reply("Skipped the current song.")
                 self.song_history.append(self.currently_playing)
-                await self.play_next(ctx)
+
+                # Avoids double sending "Disconnecting" message when skip is used at the end of the queue
+                print(len(self.song_queue))
+                if len(self.song_queue) > 0:
+                    await self.play_next(ctx)
+                else: 
+                    await ctx.reply(
+                        "There are no songs in the queue to play, disconnecting."
+                    )
+                    await voice_client.disconnect()
         else:
             await ctx.reply("I am not playing any songs right now.")
 
