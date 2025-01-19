@@ -1,13 +1,45 @@
 import asyncio
 import datetime
 import discord
-import humanize
 import yt_dlp as youtube_dl
 from discord.ext import commands
 
-# FFmpeg options to be used with discord.FFmpegPCMAudio
-# FFMPEG_OPTIONS = {"options": "-vn -filter_complex \"[0:a]apad=pad_dur=5\""}  # Adds 5 seconds of silence to the end of each song
-FFMPEG_OPTIONS = {"options": "-vn"}
+
+def humanize_duration(seconds: int) -> str:
+    """
+    Turns a duration in seconds into a more human readable time that uses hours, 
+    minutes, and seconds.
+
+    :param seconds: The number of seconds to convert 
+    :returns: A string that conveys the duration in terms of hours, minutes, and seconds
+    """
+    
+    SECONDS = 1 
+    MINUTES = 60 * SECONDS 
+    HOURS = 60 * MINUTES 
+    
+    hours = seconds // HOURS 
+    seconds = seconds % HOURS
+    minutes = seconds // MINUTES 
+    seconds = seconds % MINUTES
+
+    human_duration = ""
+    if hours > 1:
+        human_duration += f"{hours} hours "
+    elif hours == 1: 
+        human_duration += "1 hour "
+
+    if minutes > 1:
+        human_duration += f"{minutes} minutes "
+    elif minutes == 1:
+        human_duration += "1 minute "
+
+    if seconds > 1:
+        human_duration += f"{seconds} seconds"
+    elif seconds == 1:
+        human_duration += "1 second"
+
+    return human_duration
 
 
 class Music(commands.Cog):
@@ -46,7 +78,9 @@ class Music(commands.Cog):
                 return 
 
         self.song_queue.append(info)
-        await self.send_now_playing(ctx, info)  # Send now playing message
+
+        if self.currently_playing is not None:
+            await self.send_now_playing(ctx, info)  # Send now playing message
 
     async def send_now_playing(self, ctx, info):
         """
@@ -58,7 +92,7 @@ class Music(commands.Cog):
         embed.set_thumbnail(url=info["thumbnail"])
         embed.add_field(
             name="Duration",
-            value=humanize.naturaldelta(datetime.timedelta(seconds=info["duration"])),
+            value=humanize_duration(info["duration"]),
             inline=False,
         )
         await ctx.reply(embed=embed)
@@ -87,12 +121,17 @@ class Music(commands.Cog):
                     print(f"Error occurred: {error}")
                 self.song_history.append(self.currently_playing) # Add the next song to the history
                 self.currently_playing = None # Clear the currently playing song
-                coro = self.play_next(ctx)  # Schedule playing the next song
-                fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
-                try:
-                    fut.result()
-                except Exception as e:
-                    print(f"Error in after_playing: {e}")
+                if len(self.song_queue) > 0:
+                    coro = self.play_next(ctx)  # Schedule playing the next song
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+                    try:
+                        fut.result()
+                    except Exception as e:
+                        print(f"Error in after_playing: {e}")
+
+            # FFmpeg options to be used with discord.FFmpegPCMAudio
+            # FFMPEG_OPTIONS = {"options": "-vn -filter_complex \"[0:a]apad=pad_dur=5\""}  # Adds 5 seconds of silence to the end of each song
+            FFMPEG_OPTIONS = {"options": "-vn"}
 
             # Create an ffmpeg subprocess to stream the audio from the url provided by youtube search
             source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)  
@@ -139,7 +178,16 @@ class Music(commands.Cog):
                 voice_client.pause()
                 await ctx.reply("Skipped the current song.")
                 self.song_history.append(self.currently_playing)
-                await self.play_next(ctx)
+
+                # Avoids double sending "Disconnecting" message when skip is used at the end of the queue
+                print(len(self.song_queue))
+                if len(self.song_queue) > 0:
+                    await self.play_next(ctx)
+                else: 
+                    await ctx.reply(
+                        "There are no songs in the queue to play, disconnecting."
+                    )
+                    await voice_client.disconnect()
         else:
             await ctx.reply("I am not playing any songs right now.")
 
