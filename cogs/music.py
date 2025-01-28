@@ -129,6 +129,15 @@ class Music(commands.Cog):
                     except Exception as e:
                         print(f"Error in after_playing: {e}")
 
+                else:
+                    coro = voice_client.disconnect()
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+                    try:
+                        fut.result()
+                    except Exception as e:
+                        print(f"Error in after_playing: {e}")
+
+
             # FFmpeg options to be used with discord.FFmpegPCMAudio
             # FFMPEG_OPTIONS = {"options": "-vn -filter_complex \"[0:a]apad=pad_dur=5\""}  # Adds 5 seconds of silence to the end of each song
             FFMPEG_OPTIONS = {"options": "-vn"}
