@@ -64,6 +64,10 @@ class SoundButton(discord.ui.Button):
             voice_client.stop()
 
         def after_playing(error):
+            if error:
+                print(f"Encountered error in `after_playing` for a soundbyte: {error}")
+                return 
+
             if voice_client.is_playing():
                 print("Still playing audio in soundboard.")
                 return
