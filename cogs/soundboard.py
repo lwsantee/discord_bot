@@ -10,7 +10,7 @@ import subprocess
 class SoundSelect(discord.ui.View):
     """
     A Discord UI View that provides buttons for selecting and playing sounds.
-    
+
     :param soundboard: The soundboard instance containing available sounds.
     :param ctx: The context of the command execution.
     """
@@ -27,7 +27,7 @@ class SoundSelect(discord.ui.View):
 class SoundButton(discord.ui.Button):
     """
     A button representing an individual sound, which plays when clicked.
-    
+
     :param sound_name: The name of the sound.
     :param soundboard: The soundboard instance containing the sound.
     :param ctx: The context of the command execution.
@@ -42,7 +42,7 @@ class SoundButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         """
         Handles the button click event and plays the selected sound.
-        
+
         :param interaction: The Discord interaction object.
         """
 
@@ -82,12 +82,12 @@ class SoundButton(discord.ui.Button):
 class Sound:
     """
     Represents a sound that can be played in a Discord voice channel.
-    
+
     :param name: The name of the sound.
     :param file: The file path of the sound.
     :param url: The source URL of the sound (if applicable).
     """
-    
+
     def __init__(self, name: str, file: str, url: Optional[str]) -> None:
         self.name = name
         self.file = file
@@ -96,7 +96,7 @@ class Sound:
     def to_json(self) -> dict[str, Optional[str]]:
         """
         Converts the Sound object into a JSON-serializable dictionary.
-        
+
         :return: A dictionary representation of the sound.
         """
 
@@ -106,7 +106,7 @@ class Sound:
 class Soundboard(commands.Cog):
     """
     A Discord bot cog that manages sound effects for voice channels.
-    
+
     :param client: The Discord bot client instance.
     """
 
@@ -117,10 +117,10 @@ class Soundboard(commands.Cog):
     def init_sounds(self) -> dict[str, Sound]:
         """
         Loads sound data from sounds.json.
-        
+
         :return: A dictionary of sound names mapped to Sound objects.
         """
-        
+
         try:
             with open("sounds.json", "r") as f:
                 sound_data = json.load(f)
@@ -140,7 +140,7 @@ class Soundboard(commands.Cog):
     def add_sound(self, sound: Sound):
         """
         Adds a new sound to the soundboard and updates the JSON file.
-        
+
         :param sound: The sound object to be added.
         """
 
@@ -151,7 +151,7 @@ class Soundboard(commands.Cog):
     def remove_sound(self, name: str) -> Optional[Sound]:
         """
         Removes a sound from the soundboard and deletes the file.
-        
+
         :param name: The name of the sound to remove.
         :return: The removed sound object if found, else None.
         """
@@ -173,7 +173,7 @@ class Soundboard(commands.Cog):
     def to_json(self) -> dict[str, Optional[str]]:
         """
         Converts the soundboard into a JSON-serializable dictionary.
-        
+
         :return: A dictionary representation of the soundboard.
         """
 
@@ -186,21 +186,23 @@ class Soundboard(commands.Cog):
     async def sound(self, ctx):
         """
         Displays available sound commands.
-        
+
         :param ctx: The command context.
         """
 
-        await ctx.reply("""```
-            add <url> <name>  Downloads a soundbyte from <url> and adds it to the soundboard under <name>
-            pick              Display the soundboard to pick a sound```""")
+        await ctx.reply(
+            "```\n" \
+            "add <url> <name>  Downloads a soundbyte from <url> and adds it to the soundboard under <name>\n" \
+            "pick              Display the soundboard to pick a sound```"
+        )
 
     @sound.command()
     async def add(self, ctx, url: str, name: str):
         """
         Downloads a soundbyte from <url> and adds it to the soundboard under <name>
-        
-        :param ctx: The command context 
-        :param url: The url of the sound to download 
+
+        :param ctx: The command context
+        :param url: The url of the sound to download
         :param name: What to call the soundbyte
         """
 
@@ -223,7 +225,7 @@ class Soundboard(commands.Cog):
     async def pick(self, ctx):
         """
         Opens the sound selection menu.
-        
+
         :param ctx: The command context.
         """
 
@@ -241,7 +243,7 @@ class Soundboard(commands.Cog):
 async def setup(client: commands.Bot):
     """
     Adds the Soundboard cog to the bot.
-    
+
     :param client: The Discord bot client.
     """
 
