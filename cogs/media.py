@@ -34,7 +34,7 @@ class Media(commands.Cog):
         """
         if not results:
             await ctx.reply(f"No {result_type} found.")
-        elif number == '-1':
+        elif number == "-1":
             embeds = []
             for result_url in results:
                 embed = discord.Embed(
@@ -126,8 +126,12 @@ class Media(commands.Cog):
         """
         Search for a random image.
         """
-        parts = query.rsplit(' ', 1)
-        if len(parts) == 2 and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1) or parts[1] == '-1':
+        parts = query.rsplit(" ", 1)
+        if (
+            len(parts) == 2
+            and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1)
+            or parts[1] == "-1"
+        ):
             search_query, number = parts
             await self.google_image_search(ctx, search_query, number, "image")
         elif len(parts) == 2 and parts[1].isdigit():
@@ -137,23 +141,32 @@ class Media(commands.Cog):
             number = random.randrange(1, 10)
             await self.google_image_search(ctx, query, number, "image")
 
-
     @commands.command(name="gif")
     async def gif_search(self, ctx, *, query):
         """
         Search for a random GIF.
         """
-        parts = query.rsplit(' ', 1)
-        if len(parts) == 2 and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1) or parts[1] == '-1':
+        parts = query.rsplit(" ", 1)
+        if (
+            len(parts) == 2
+            and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1)
+            or parts[1] == "-1"
+        ):
             search_query, number = parts
-            await self.google_image_search(ctx, search_query, number, "GIF", img_type="animated")
+            await self.google_image_search(
+                ctx, search_query, number, "GIF", img_type="animated"
+            )
         elif len(parts) == 2 and parts[1].isdigit():
             search_query, number = parts[0], random.randrange(1, 10)
-            await self.google_image_search(ctx, search_query, number, "GIF", img_type="animated")
+            await self.google_image_search(
+                ctx, search_query, number, "GIF", img_type="animated"
+            )
         else:
             number = random.randrange(1, 10)
-            await self.google_image_search(ctx, query, number, "GIF", img_type="animated")
-        
+            await self.google_image_search(
+                ctx, query, number, "GIF", img_type="animated"
+            )
+
     @commands.command(name="video")
     async def video_search(self, ctx, *, query):
         """
