@@ -7,26 +7,26 @@ from discord.ext import commands
 
 def humanize_duration(seconds: int) -> str:
     """
-    Turns a duration in seconds into a more human readable time that uses hours, 
+    Turns a duration in seconds into a more human readable time that uses hours,
     minutes, and seconds.
 
-    :param seconds: The number of seconds to convert 
+    :param seconds: The number of seconds to convert
     :returns: A string that conveys the duration in terms of hours, minutes, and seconds
     """
-    
-    SECONDS = 1 
-    MINUTES = 60 * SECONDS 
-    HOURS = 60 * MINUTES 
-    
-    hours = seconds // HOURS 
+
+    SECONDS = 1
+    MINUTES = 60 * SECONDS
+    HOURS = 60 * MINUTES
+
+    hours = seconds // HOURS
     seconds = seconds % HOURS
-    minutes = seconds // MINUTES 
+    minutes = seconds // MINUTES
     seconds = seconds % MINUTES
 
     human_duration = ""
     if hours > 1:
         human_duration += f"{hours} hours "
-    elif hours == 1: 
+    elif hours == 1:
         human_duration += "1 hour "
 
     if minutes > 1:
@@ -46,8 +46,8 @@ class Music(commands.Cog):
     def __init__(self, client):
         self.client = client  # Discord bot client
         self.song_queue = []  # Queue to store songs to be played
-        self.song_history = [] # List of previously played songs
-        self.currently_playing = None # The currently playing song
+        self.song_history = []  # List of previously played songs
+        self.currently_playing = None  # The currently playing song
 
     async def join_voice_channel(self, ctx):
         """
@@ -66,16 +66,27 @@ class Music(commands.Cog):
         Adds a song to the queue.
         """
         await self.join_voice_channel(ctx)  # Ensure bot is in a voice channel
-        ydl_opts = {"format": "bestaudio/best", "geo-bypass": True, "rm-cache-dir": True}
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "geo-bypass": True,
+            "rm-cache-dir": True,
+        }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"ytsearch:{query}", download=False)
-            if info and "entries" in info and len(info["entries"]) > 0 and "url" in info["entries"][0]:
+            if (
+                info
+                and "entries" in info
+                and len(info["entries"]) > 0
+                and "url" in info["entries"][0]
+            ):
                 info = info["entries"][0]  # Get the first search result
                 print(f"Found media url: {info['url']}")
             else:
-                print(f"Got an unexpected result from YouTube search. Query: {query}. Response: {info}")
-                await ctx.reply(f"No results found for \"{query}\"")
-                return 
+                print(
+                    f"Got an unexpected result from YouTube search. Query: {query}. Response: {info}"
+                )
+                await ctx.reply(f'No results found for "{query}"')
+                return
 
         self.song_queue.append(info)
 
@@ -111,7 +122,9 @@ class Music(commands.Cog):
             return
         else:
             info = self.song_queue.pop(0)  # Get the next song from the queue
-            self.currently_playing = info # Set the currently playing song to the next song
+            self.currently_playing = (
+                info  # Set the currently playing song to the next song
+            )
 
             def after_playing(error):
                 """
@@ -119,8 +132,10 @@ class Music(commands.Cog):
                 """
                 if error:
                     print(f"Error occurred: {error}")
-                self.song_history.append(self.currently_playing) # Add the next song to the history
-                self.currently_playing = None # Clear the currently playing song
+                self.song_history.append(
+                    self.currently_playing
+                )  # Add the next song to the history
+                self.currently_playing = None  # Clear the currently playing song
                 if len(self.song_queue) > 0:
                     coro = self.play_next(ctx)  # Schedule playing the next song
                     fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
@@ -137,13 +152,12 @@ class Music(commands.Cog):
                     except Exception as e:
                         print(f"Error in after_playing: {e}")
 
-
             # FFmpeg options to be used with discord.FFmpegPCMAudio
             # FFMPEG_OPTIONS = {"options": "-vn -filter_complex \"[0:a]apad=pad_dur=5\""}  # Adds 5 seconds of silence to the end of each song
             FFMPEG_OPTIONS = {"options": "-vn"}
 
             # Create an ffmpeg subprocess to stream the audio from the url provided by youtube search
-            source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)  
+            source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)
             voice_client.play(source, after=after_playing)  # Play the current song
             await self.send_now_playing(ctx, info)  # Send now playing message
 
@@ -154,7 +168,9 @@ class Music(commands.Cog):
         """
         await self.add_to_queue(ctx, query)  # Add song to the queue
         voice_client = ctx.guild.voice_client
-        if voice_client and not voice_client.is_playing():  # If nothing is playing, start playing
+        if (
+            voice_client and not voice_client.is_playing()
+        ):  # If nothing is playing, start playing
             await self.play_next(ctx)
 
     @commands.command()
@@ -192,7 +208,7 @@ class Music(commands.Cog):
                 print(len(self.song_queue))
                 if len(self.song_queue) > 0:
                     await self.play_next(ctx)
-                else: 
+                else:
                     await ctx.reply(
                         "There are no songs in the queue to play, disconnecting."
                     )
@@ -285,15 +301,15 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="Song Queue",
             description="Here is the list of songs in the queue:",
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
         )
-        
+
         # Add each song title as a new field
         for index, song in enumerate(self.song_queue, start=1):
             embed.add_field(name=f"Song {index}", value=song["title"], inline=False)
 
         await ctx.send(embed=embed)
-        
+
     @commands.command()
     async def history(self, ctx):
         """
@@ -303,14 +319,15 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="Song History",
             description="Here is the list of previously played songs:",
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
         )
-        
+
         # Add each song title as a new field
         for index, song in enumerate(self.song_history, start=1):
             embed.add_field(name=f"Song {index}", value=song["title"], inline=False)
 
         await ctx.send(embed=embed)
+
 
 # Function to set up the Music cog
 async def setup(client):
