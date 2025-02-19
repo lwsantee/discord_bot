@@ -16,7 +16,7 @@ class SoundSelect(discord.ui.View):
     """
 
     def __init__(self, soundboard, ctx):
-        super().__init__(timeout=60)  # Buttons expire after 60 seconds
+        super().__init__()
         self.soundboard = soundboard
         self.ctx = ctx
 
