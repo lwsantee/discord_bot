@@ -7,82 +7,6 @@ import os
 import subprocess
 
 
-class SoundSelect(discord.ui.View):
-    """
-    A Discord UI View that provides buttons for selecting and playing sounds.
-
-    :param soundboard: The soundboard instance containing available sounds.
-    :param ctx: The context of the command execution.
-    """
-
-    def __init__(self, soundboard, ctx):
-        super().__init__()
-        self.soundboard = soundboard
-        self.ctx = ctx
-
-        for sound_name in self.soundboard.sounds.keys():
-            self.add_item(SoundButton(sound_name, soundboard, ctx))
-
-
-class SoundButton(discord.ui.Button):
-    """
-    A button representing an individual sound, which plays when clicked.
-
-    :param sound_name: The name of the sound.
-    :param soundboard: The soundboard instance containing the sound.
-    :param ctx: The context of the command execution.
-    """
-
-    def __init__(self, sound_name, soundboard, ctx):
-        super().__init__(label=sound_name, style=discord.ButtonStyle.primary)
-        self.sound_name = sound_name
-        self.soundboard = soundboard
-        self.ctx = ctx
-
-    async def callback(self, interaction: discord.Interaction):
-        """
-        Handles the button click event and plays the selected sound.
-
-        :param interaction: The Discord interaction object.
-        """
-
-        sound = self.soundboard.sounds[self.sound_name]
-        voice_client = discord.utils.get(
-            self.ctx.bot.voice_clients, guild=self.ctx.guild
-        )
-
-        if not voice_client or not voice_client.is_connected():
-            if self.ctx.author.voice and self.ctx.author.voice.channel:
-                voice_client = await self.ctx.author.voice.channel.connect()
-            else:
-                await interaction.response.send_message(
-                    "You must be in a voice channel!", ephemeral=True
-                )
-                return
-
-        if voice_client.is_playing():
-            voice_client.stop()
-
-        def after_playing(error):
-            if error:
-                print(f"Encountered error in `after_playing` for a soundbyte: {error}")
-                return 
-
-            if voice_client.is_playing():
-                print("Still playing audio in soundboard.")
-                return
-
-            coro = voice_client.disconnect()
-            fut = asyncio.run_coroutine_threadsafe(coro, self.ctx.bot.loop)
-            try:
-                fut.result()
-            except Exception as e:
-                print(f"Error in after_playing: {e}")
-
-        voice_client.play(discord.FFmpegPCMAudio(sound.file), after=after_playing)
-        await interaction.response.defer()  # Some response is required to let the user know their interaction worked
-
-
 class Sound:
     """
     Represents a sound that can be played in a Discord voice channel.
@@ -211,20 +135,59 @@ class Soundboard(commands.Cog):
         :param name: What to call the soundbyte
         """
 
-        # TODO: Allow renaming existing soundbytes
         if name in self.sounds:
             await ctx.reply(f"There is already a soundbyte called {name}")
             return
 
-        # TODO: Handle bad urls
-        os.makedirs("sounds", exist_ok=True)
-        subprocess.run(
-            f"python3 -m yt_dlp -x --format=bestaudio --embed-thumbnail --add-metadata -o sounds/{name} {url}".split(
-                " "
+        try:
+            if file_size(url) > 100_000_000:  # Prevent downloading large files
+                await ctx.reply("Cannot download files over 100MB")
+                return
+        except Exception as e:
+            await ctx.reply(
+                f"Cannot verify the size of your download because of ```\n{e}```"
             )
+            print(f"Cannot verify the size of your download because of ```\n{e}```")
+            return
+
+        os.makedirs("sounds", exist_ok=True)
+        process = subprocess.run(
+            f"python3 -m yt_dlp -x --format=bestaudio/best --embed-thumbnail --add-metadata -o sounds/{name} {url}".split(
+                " "
+            ),
+            capture_output=True,
         )
-        self.add_sound(Sound(name, f"sounds/{name}.opus", url))
+        if process.returncode != 0:
+            await ctx.reply(
+                f"Failed to download sound because of ```\n{process.stderr.decode()}```"
+            )
+            print(
+                f"Failed to download sound because of ```\n{process.stderr.decode()}```"
+            )
+            return
+        try:
+            file_path = extract_file_path(process.stdout)
+        except Exception as e:
+            await ctx.reply(f"Failed to get sound file path because of ```\n{e}```")
+            print(f"Failed to get sound file path because of ```\n{e}```")
+            return
+
+        self.add_sound(Sound(name, file_path, url))
         await ctx.reply(f"Added soundbyte called {name} from {url}")
+
+    @sound.command()
+    async def rm(self, ctx):
+        """
+        Opens a menu to pick a sound to remove from the soundboard
+
+        :param ctx: The context of the interaction
+        """
+
+        if not self.sounds or len(self.sounds) == 0:
+            await ctx.reply("There are no sounds to be removed!")
+            return
+        view = SoundSelect(self, True, ctx)
+        await ctx.reply("Pick a sound to remove:", view=view)
 
     @sound.command()
     async def pick(self, ctx):
@@ -234,14 +197,171 @@ class Soundboard(commands.Cog):
         :param ctx: The command context.
         """
 
-        if not self.sounds:
+        if not self.sounds or len(self.sounds) == 0:
             await ctx.reply(
                 "No sounds available! You can add some with ```\n.sound add <url> <name>```"
             )
             return
 
-        view = SoundSelect(self, ctx)
+        view = SoundSelect(self, False, ctx)
         await ctx.reply("Pick a sound to play:", view=view)
+
+
+class SoundSelect(discord.ui.View):
+    """
+    A Discord UI View that provides buttons for selecting and playing sounds.
+
+    :param soundboard: The soundboard instance containing available sounds.
+    :param remove: `True` if the selection will be used to remove a sound. `False` if the selection will play the sound
+    :param ctx: The context of the command execution.
+    """
+
+    def __init__(self, soundboard: Soundboard, remove: bool, ctx):
+        if remove:
+            super().__init__(
+                timeout=60
+            )  # Set a timeout on the remove picker just in case
+        else:
+            super().__init__()
+        self.soundboard = soundboard
+        self.ctx = ctx
+
+        for sound_name in self.soundboard.sounds.keys():
+            if remove:
+                self.add_item(RemoveSoundButton(sound_name, soundboard, ctx))
+            else:
+                self.add_item(PlaySoundButton(sound_name, soundboard, ctx))
+
+
+class RemoveSoundButton(discord.ui.Button):
+    """
+    A button representing an individual sound, which is removed from the soundboard when clicked.
+
+    :param sound_name: The name of the sound.
+    :param soundboard: The soundboard instance containing the sound.
+    :param ctx: The context of the command execution.
+    """
+
+    def __init__(self, sound_name: str, soundboard: Soundboard, ctx):
+        super().__init__(label=sound_name, style=discord.ButtonStyle.danger)
+        self.sound_name = sound_name
+        self.soundboard = soundboard
+        self.ctx = ctx
+
+    async def callback(self, interaction: discord.Interaction):
+        """
+        Handles the button click event and removes the selected sound.
+
+        :param interaction: The Discord interaction object.
+        """
+
+        url = self.soundboard.sounds[self.sound_name].url
+        self.soundboard.remove_sound(self.sound_name)
+        await interaction.response.send_message(
+            f'Removed sound "{self.sound_name}" with url {url}'
+        )
+
+
+class PlaySoundButton(discord.ui.Button):
+    """
+    A button representing an individual sound, which plays when clicked.
+
+    :param sound_name: The name of the sound.
+    :param soundboard: The soundboard instance containing the sound.
+    :param ctx: The context of the command execution.
+    """
+
+    def __init__(self, sound_name, soundboard, ctx):
+        super().__init__(label=sound_name, style=discord.ButtonStyle.primary)
+        self.sound_name = sound_name
+        self.soundboard = soundboard
+        self.ctx = ctx
+
+    async def callback(self, interaction: discord.Interaction):
+        """
+        Handles the button click event and plays the selected sound.
+
+        :param interaction: The Discord interaction object.
+        """
+
+        sound = self.soundboard.sounds[self.sound_name]
+        voice_client = discord.utils.get(
+            self.ctx.bot.voice_clients, guild=self.ctx.guild
+        )
+
+        if not voice_client or not voice_client.is_connected():
+            if self.ctx.author.voice and self.ctx.author.voice.channel:
+                voice_client = await self.ctx.author.voice.channel.connect()
+            else:
+                await interaction.response.send_message(
+                    "You must be in a voice channel!", ephemeral=True
+                )
+                return
+
+        if voice_client.is_playing():
+            voice_client.stop()
+
+        def after_playing(error):
+            if error:
+                print(f"Encountered error in `after_playing` for a soundbyte: {error}")
+                return
+
+            if voice_client.is_playing():
+                print("Still playing audio in soundboard.")
+                return
+
+            coro = voice_client.disconnect()
+            fut = asyncio.run_coroutine_threadsafe(coro, self.ctx.bot.loop)
+            try:
+                fut.result()
+            except Exception as e:
+                print(f"Error in after_playing: {e}")
+
+        voice_client.play(discord.FFmpegPCMAudio(sound.file), after=after_playing)
+        await interaction.response.defer()  # Some response is required to let the user know their interaction worked
+
+
+def extract_file_path(ytdl_stdout: bytes) -> str:
+    """
+    Parses the standard output of a yt-dlp call to read the file path where a file
+    was saved
+
+    :param ytdl_stdout: The byte array passed from the stdout of a yt-dlp call
+    :return: The file path extracted from stdout
+    """
+
+    last_line = ytdl_stdout.split(b"\n").pop(-2)  # The last line that is not blank
+    path_start_index = (
+        47  # The file path should start at the 46th index of the last line
+    )
+    path_end_index = (
+        len(last_line) - 1
+    )  # The file path should end at the second to last index of the last line
+    return last_line[path_start_index:path_end_index].decode()
+
+
+def file_size(url: str) -> int:
+    """
+    Get the size in bytes of the whole file at the given url
+
+    :param url: The url to fetch the file size of
+    :return: The size in bytes of the file at `url`
+    """
+
+    process = subprocess.run(
+        f'python3 -m yt_dlp --format=bestaudio/best --print "%(filesize)d" {url}'.split(
+            " "
+        ),
+        capture_output=True,
+    )
+    if process.returncode != 0:
+        raise subprocess.CalledProcessError(
+            process.returncode,
+            "python3 -m yt_dlp",
+            stderr=f"Cannot read file size of sound because of ```\n{process.stdout}```",
+        )
+
+    return int(process.stdout.decode().strip("\" \n'"))
 
 
 # Function to set up the Music cog
