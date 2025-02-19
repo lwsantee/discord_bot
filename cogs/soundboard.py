@@ -195,9 +195,10 @@ class Soundboard(commands.Cog):
         """
 
         await ctx.reply(
-            "```\n" \
-            "add <url> <name>  Downloads a soundbyte from <url> and adds it to the soundboard under <name>\n" \
-            "pick              Display the soundboard to pick a sound```"
+            "```\n"
+            "add <url> <name>  Downloads a soundbyte from <url> and adds it to the soundboard under <name>\n"
+            "rm                Display a sound menu to remove a sound\n"
+            "pick              Display the soundboard to play a sound```"
         )
 
     @sound.command()
