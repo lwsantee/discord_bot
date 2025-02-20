@@ -5,6 +5,7 @@ import requests
 import googleapiclient.discovery
 from dotenv import load_dotenv
 import os
+from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -121,51 +122,54 @@ class Media(commands.Cog):
             await ctx.reply(f"An error occurred: {error}")
             raise error
 
+    async def image_search_helper(self, ctx, query: str, is_gif: bool):
+        parts = query.split(" ")
+        if len(parts) == 0:
+            await ctx.reply("Nothing to search for.")
+            print("Query missing in `Media.image_search_helper`")
+            return
+
+        last_part = parts[-1]
+        number = random.randint(1, 10)
+        if last_part == "-1" or last_part.isdigit():
+            number = int(last_part)
+            query = " ".join(parts[:-1])
+        else:
+            query = " ".join(parts)
+
+        if number > 10 or number == 0:
+            number = random.randint(1, 10)
+
+        if not is_gif:
+            if number < 0:
+                for n in range(1, 11):
+                    await self.google_image_search(ctx, query, n, "image")
+            else:
+                await self.google_image_search(ctx, query, number, "image")
+        else:
+            if number < 0:
+                for n in range(1, 11):
+                    await self.google_image_search(
+                        ctx, query, n, "GIF", img_type="animated"
+                    )
+            else:
+                await self.google_image_search(
+                    ctx, query, number, "GIF", img_type="animated"
+                )
+
     @commands.command(name="image")
-    async def image_search(self, ctx, *, query):
+    async def image_search(self, ctx, *, query: str):
         """
         Search for a random image.
         """
-        parts = query.rsplit(" ", 1)
-        if (
-            len(parts) == 2
-            and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1)
-            or parts[1] == "-1"
-        ):
-            search_query, number = parts
-            await self.google_image_search(ctx, search_query, number, "image")
-        elif len(parts) == 2 and parts[1].isdigit():
-            search_query, number = parts[0], random.randrange(1, 10)
-            await self.google_image_search(ctx, search_query, number, "image")
-        else:
-            number = random.randrange(1, 10)
-            await self.google_image_search(ctx, query, number, "image")
+        await self.image_search_helper(ctx, query, False)
 
     @commands.command(name="gif")
-    async def gif_search(self, ctx, *, query):
+    async def gif_search(self, ctx, *, query: str):
         """
         Search for a random GIF.
         """
-        parts = query.rsplit(" ", 1)
-        if (
-            len(parts) == 2
-            and (parts[1].isdigit() and int(parts[1]) <= 10 and int(parts[1]) >= 1)
-            or parts[1] == "-1"
-        ):
-            search_query, number = parts
-            await self.google_image_search(
-                ctx, search_query, number, "GIF", img_type="animated"
-            )
-        elif len(parts) == 2 and parts[1].isdigit():
-            search_query, number = parts[0], random.randrange(1, 10)
-            await self.google_image_search(
-                ctx, search_query, number, "GIF", img_type="animated"
-            )
-        else:
-            number = random.randrange(1, 10)
-            await self.google_image_search(
-                ctx, query, number, "GIF", img_type="animated"
-            )
+        await self.image_search_helper(ctx, query, True)
 
     @commands.command(name="video")
     async def video_search(self, ctx, *, query):
