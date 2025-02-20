@@ -317,7 +317,13 @@ class PlaySoundButton(discord.ui.Button):
             except Exception as e:
                 print(f"Error in after_playing: {e}")
 
-        voice_client.play(discord.FFmpegPCMAudio(sound.file), after=after_playing)
+        voice_client.play(
+            discord.FFmpegPCMAudio(
+                sound.file,
+                options="-af loudnorm=I=-14:TP=-2:LRA=11",
+            ),
+            after=after_playing,
+        )
         await interaction.response.defer()  # Some response is required to let the user know their interaction worked
 
 
