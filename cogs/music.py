@@ -137,20 +137,14 @@ class Music(commands.Cog):
                 if len(self.song_queue) > 0:
                     coro = self.play_next(ctx)  # Schedule the next song
                     fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
-                    try:
-                        fut.result()
-                    except Exception as e:
-                        print(f"Error in after_playing: {e}")
+                    fut.result()
 
                 else:
                     coro = (
                         voice_client.disconnect()
                     )  # Disconnect if no songs remain in the queue
                     fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
-                    try:
-                        fut.result()
-                    except Exception as e:
-                        print(f"Error in after_playing: {e}")
+                    fut.result()
 
             FFMPEG_OPTIONS = {
                 "options": "-vn"
@@ -165,7 +159,7 @@ class Music(commands.Cog):
     @commands.command()
     async def play(self, ctx, *, query):
         """
-        Adds a song to the queue and plays it if nothing is currently playing.
+        Adds a song to the queue and plays it if nothing is playing.
         """
         await self.add_to_queue(ctx, query)  # Add song to the queue
         voice_client = ctx.guild.voice_client

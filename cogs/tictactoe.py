@@ -114,7 +114,7 @@ class TicTacToe(commands.Cog):
     @commands.command(name="move")
     async def make_move(self, ctx, pos: int):
         """
-        Handle a player's move. The player provides a position (1-9), and the move is placed on the board.
+        Places the move on the board at the provided index (1-9).
         """
         if not self.game_in_progress:
             await ctx.send("No game in progress. Use `!start` to start a game.")
