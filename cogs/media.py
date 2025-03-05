@@ -5,20 +5,25 @@ import requests
 import googleapiclient.discovery
 from dotenv import load_dotenv
 import os
-from typing import Optional
+
 
 # Load environment variables
 load_dotenv()
 
+
 class Media(commands.Cog):
     def __init__(self, bot):
-        # Initialize bot and API keys
+        """
+        Initializes the Media class with bot and API keys.
+        """
         self.bot = bot
         self.cx = os.getenv("CX")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
 
     async def fetch_search_results(self, search_url, search_params):
-        # Fetch search results from an API
+        """
+        Fetches search results from an API based on the provided URL and parameters.
+        """
         try:
             response = requests.get(search_url, params=search_params).json()
             return [item["link"] for item in response.get("items", [])]
@@ -26,7 +31,9 @@ class Media(commands.Cog):
             raise error
 
     async def create_embed(self, ctx, query, result_type, results, number, footer_text):
-        # Create and send an embed with search results
+        """
+        Creates and sends an embedded message with search results.
+        """
         if not results:
             await ctx.reply(f"No {result_type} found.")
         elif number == "-1":
@@ -56,7 +63,9 @@ class Media(commands.Cog):
             await ctx.reply(embed=embed)
 
     async def google_image_search(self, ctx, query, number, result_type, img_type=None):
-        # Perform a Google image search
+        """
+        Performs a Google image search with optional image type filter.
+        """
         search_params = {
             "q": query,
             "searchType": "image",
@@ -73,7 +82,9 @@ class Media(commands.Cog):
         await self.create_embed(ctx, query, result_type, results, number, "")
 
     async def youtube_video_search(self, ctx, query):
-        # Perform a YouTube video search
+        """
+        Performs a YouTube video search and sends an embed with a random video result.
+        """
         try:
             search_params = {
                 "q": query,
@@ -113,7 +124,9 @@ class Media(commands.Cog):
             raise error
 
     async def image_search_helper(self, ctx, query: str, is_gif: bool):
-        # Handle search queries and determine image type
+        """
+        Handles search queries and determines whether to search for images or GIFs based on the query.
+        """
         parts = query.split(" ")
         if len(parts) == 0:
             await ctx.reply("Nothing to search for.")
@@ -150,19 +163,28 @@ class Media(commands.Cog):
 
     @commands.command(name="image")
     async def image_search(self, ctx, *, query: str):
-        # Search for an image
+        """
+        Command to search for an image based on the user's query.
+        """
         await self.image_search_helper(ctx, query, False)
 
     @commands.command(name="gif")
     async def gif_search(self, ctx, *, query: str):
-        # Search for a GIF
+        """
+        Command to search for a GIF based on the user's query.
+        """
         await self.image_search_helper(ctx, query, True)
 
     @commands.command(name="video")
     async def video_search(self, ctx, *, query):
-        # Search for a video
+        """
+        Command to search for a YouTube video based on the user's query.
+        """
         await self.youtube_video_search(ctx, query)
 
+
 async def setup(bot):
-    # Add Media cog to the bot
+    """
+    Adds the Media cog to the bot.
+    """
     await bot.add_cog(Media(bot))
