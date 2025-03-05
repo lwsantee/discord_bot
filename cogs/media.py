@@ -24,11 +24,8 @@ class Media(commands.Cog):
         """
         Fetches search results from an API based on the provided URL and parameters.
         """
-        try:
-            response = requests.get(search_url, params=search_params).json()
-            return [item["link"] for item in response.get("items", [])]
-        except Exception as error:
-            raise error
+        response = requests.get(search_url, params=search_params).json()
+        return [item["link"] for item in response.get("items", [])]
 
     async def create_embed(self, ctx, query, result_type, results, number, footer_text):
         """
@@ -85,43 +82,37 @@ class Media(commands.Cog):
         """
         Performs a YouTube video search and sends an embed with a random video result.
         """
-        try:
-            search_params = {
-                "q": query,
-                "type": "video",
-                "part": "id",
-                "maxResults": 50,
-            }
-            youtube = googleapiclient.discovery.build(
-                "youtube", "v3", developerKey=self.google_api_key
-            )
-            results = youtube.search().list(**search_params).execute()
-            videos = [
-                item["id"]["videoId"]
-                for item in results["items"]
-                if item["id"]["kind"] == "youtube#video"
-            ]
+        search_params = {
+            "q": query,
+            "type": "video",
+            "part": "id",
+            "maxResults": 50,
+        }
+        youtube = googleapiclient.discovery.build(
+            "youtube", "v3", developerKey=self.google_api_key
+        )
+        results = youtube.search().list(**search_params).execute()
+        videos = [
+            item["id"]["videoId"]
+            for item in results["items"]
+            if item["id"]["kind"] == "youtube#video"
+        ]
 
-            if not videos:
-                await ctx.reply("No videos found.")
-            else:
-                video_id = random.choice(videos)
-                video_url = f"https://www.youtube.com/watch?v={video_id}"
-                embed = discord.Embed(
-                    title=f"Here's a {query} video for you!",
-                    color=discord.Color.blurple(),
-                )
-                embed.add_field(name="Video URL", value=video_url, inline=False)
-                embed.set_image(
-                    url=f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-                )
-                embed.set_footer(
-                    text=f"{videos.index(video_id) + 1} of {len(videos)} videos"
-                )
-                await ctx.reply(embed=embed)
-        except Exception as error:
-            await ctx.reply(f"An error occurred: {error}")
-            raise error
+        if not videos:
+            await ctx.reply("No videos found.")
+        else:
+            video_id = random.choice(videos)
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            embed = discord.Embed(
+                title=f"Here's a {query} video for you!",
+                color=discord.Color.blurple(),
+            )
+            embed.add_field(name="Video URL", value=video_url, inline=False)
+            embed.set_image(url=f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg")
+            embed.set_footer(
+                text=f"{videos.index(video_id) + 1} of {len(videos)} videos"
+            )
+            await ctx.reply(embed=embed)
 
     async def image_search_helper(self, ctx, query: str, is_gif: bool):
         """
@@ -164,21 +155,21 @@ class Media(commands.Cog):
     @commands.command(name="image")
     async def image_search(self, ctx, *, query: str):
         """
-        Command to search for an image based on the user's query.
+        Searches for an image based on the provided query.
         """
         await self.image_search_helper(ctx, query, False)
 
     @commands.command(name="gif")
     async def gif_search(self, ctx, *, query: str):
         """
-        Command to search for a GIF based on the user's query.
+        Searches for a GIF based on the provided query.
         """
         await self.image_search_helper(ctx, query, True)
 
     @commands.command(name="video")
     async def video_search(self, ctx, *, query):
         """
-        Command to search for a YouTube video based on the user's query.
+        Searches for a YouTube video based on the provided query.
         """
         await self.youtube_video_search(ctx, query)
 
