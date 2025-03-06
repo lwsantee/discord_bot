@@ -59,11 +59,9 @@ class General(commands.Cog):
         Returns a list of basic descriptions for all commands, or an in-depth description of one command if the name is provided.
         """
         if command_name:
-            # Get the command object
             command = self.bot.get_command(command_name)
 
             if command:
-                # Extract the detailed docstring
                 detailed_help = command.callback.__doc__
                 if not detailed_help:
                     detailed_help = "No additional information available."
@@ -78,7 +76,6 @@ class General(commands.Cog):
                 await ctx.reply(f"Command `{command_name}` not found.")
 
         else:
-            # Show all commands categorized by cog
             embed = discord.Embed(
                 title="Available Commands",
                 description="Use `.help <command>` for more details on a specific command.",
@@ -99,7 +96,6 @@ class General(commands.Cog):
                         inline=False,
                     )
 
-            # Also add commands not in a cog
             uncategorized = [
                 f"`{cmd.name}` - {cmd.help or 'No description available.'}"
                 for cmd in self.bot.commands
