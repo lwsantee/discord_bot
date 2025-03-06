@@ -11,6 +11,8 @@ class TicTacToe(commands.Cog):
         self.current_player = None
         self.board = None
 
+    # ======== Data Processing ========
+
     def reset_board(self):
         """
         Reset the TicTacToe board to its initial state with numbered cells.
@@ -92,6 +94,8 @@ class TicTacToe(commands.Cog):
             if self.board[r][c] not in ["X", "O"]:
                 self.board[r][c] = "O"
                 return
+
+    # ======== Commands ========
 
     @commands.command(
         name="start", help="Starts a new TicTacToe game if no game is in progress."
