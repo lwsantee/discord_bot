@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 
 
@@ -8,12 +9,7 @@ class General(commands.Cog):
         """
         self.bot = bot
 
-    @commands.command(name="ping")
-    async def ping(self, ctx):
-        """
-        Responds with the bot's latency.
-        """
-        await ctx.reply(f"Pong! Latency: {round(self.bot.latency * 1000)}ms")
+    # ======== Listeners ========
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -32,9 +28,96 @@ class General(commands.Cog):
             await ctx.reply("An error occurred. Please try again later.")
             raise error
 
+    # ======== Commands ========
 
-async def setup(client):
+    @commands.command(name="ping", help="Responds with the bot's latency.")
+    async def ping_command(self, ctx):
+        """
+        **Usage:** `.ping`
+
+        **Description:**
+        Returns the current latency that the bot is experiencing.
+        """
+        await ctx.reply(f"Pong! Latency: {round(self.bot.latency * 1000)}ms.")
+
+    @commands.command(
+        name="help",
+        help="Shows a list of commands grouped by category, or detailed info if a specific command is provided.",
+    )
+    async def help_command(self, ctx, command_name: str = None):
+        """
+        **Usage:** `.help <command>`
+
+        **Parameters:**
+        - `<command>` (optional) - The name of a command.
+
+        **Example:**
+        - `.help ping` → "Returns an in-depth description of the '.ping' command and how to use it."
+        - `.help` → "Returns a help message containing simple descriptions of all commands."
+
+        **Description:**
+        Returns a list of basic descriptions for all commands, or an in-depth description of one command if the name is provided.
+        """
+        if command_name:
+            # Get the command object
+            command = self.bot.get_command(command_name)
+
+            if command:
+                # Extract the detailed docstring
+                detailed_help = command.callback.__doc__
+                if not detailed_help:
+                    detailed_help = "No additional information available."
+
+                embed = discord.Embed(
+                    title=f"Help for `{command_name}`",
+                    description=detailed_help.strip(),
+                    color=discord.Color.blurple(),
+                )
+                await ctx.reply(embed=embed)
+            else:
+                await ctx.reply(f"Command `{command_name}` not found.")
+
+        else:
+            # Show all commands categorized by cog
+            embed = discord.Embed(
+                title="Available Commands",
+                description="Use `.help <command>` for more details on a specific command.",
+                color=discord.Color.blurple(),
+            )
+
+            for cog_name, cog in self.bot.cogs.items():
+                command_list = [
+                    f"`{cmd.name}` - {cmd.help or 'No description available.'}"
+                    for cmd in cog.get_commands()
+                    if not cmd.hidden
+                ]
+
+                if command_list:
+                    embed.add_field(
+                        name=f"**{cog_name}**",
+                        value="\n".join(command_list),
+                        inline=False,
+                    )
+
+            # Also add commands not in a cog
+            uncategorized = [
+                f"`{cmd.name}` - {cmd.help or 'No description available.'}"
+                for cmd in self.bot.commands
+                if cmd.cog is None and not cmd.hidden
+            ]
+
+            if uncategorized:
+                embed.add_field(
+                    name="**Uncategorized**",
+                    value="\n".join(uncategorized),
+                    inline=False,
+                )
+
+            await ctx.reply(embed=embed)
+
+
+async def setup(bot):
     """
     Sets up the General cog by adding it to the bot client.
     """
-    await client.add_cog(General(client))
+    await bot.add_cog(General(bot))

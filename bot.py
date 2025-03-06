@@ -9,15 +9,17 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 # Create a bot instance with a specified command prefix and intents
-bot = commands.Bot(command_prefix=".", intents=intents)
+bot = commands.Bot(command_prefix=".", help_command=None, intents=intents)
 
 # Load environment variables from the .env file
 load_dotenv()
 
 
-# Event triggered when the bot is ready
 @bot.event
 async def on_ready():
+    """
+    Event triggered when the bot is ready.
+    """
     print(f"Logged in as {bot.user.name}")
 
     # Retrieve the channel object using the stored CHANNEL_ID from environment variables
