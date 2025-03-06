@@ -7,6 +7,12 @@ from discord.ext import commands
 def humanize_duration(seconds: int) -> str:
     """
     Converts a duration given in seconds to a human-readable format (e.g., "1 hour 30 minutes").
+
+    Parameters:
+    - seconds (int): The duration in seconds to be converted.
+
+    Returns:
+    - str: The human-readable format of the duration.
     """
     SECONDS = 1
     MINUTES = 60 * SECONDS
@@ -36,22 +42,27 @@ def humanize_duration(seconds: int) -> str:
     return human_duration
 
 
-# The Music class defines the behavior of the music bot commands
 class Music(commands.Cog):
     def __init__(self, bot):
         """
         Initializes the Music cog with the bot instance, song queue, and song history.
+
+        Parameters:
+        - bot (commands.Bot): The bot instance to which the cog will be added.
         """
-        self.bot = bot  # Bot client
-        self.song_queue = []  # Song queue
-        self.song_history = []  # List of previously played songs
-        self.currently_playing = None  # The current song being played
+        self.bot = bot
+        self.song_queue = []
+        self.song_history = []
+        self.currently_playing = None
 
     # ======== Data Processing ========
 
     async def join_voice_channel(self, ctx):
         """
         Ensures the bot joins the same voice channel as the user who invoked the command.
+
+        Parameters:
+        - ctx (commands.Context): The context of the command invocation.
         """
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
@@ -64,8 +75,12 @@ class Music(commands.Cog):
     async def add_to_queue(self, ctx, query):
         """
         Adds a song to the queue based on the search query.
+
+        Parameters:
+        - ctx (commands.Context): The context of the command invocation.
+        - query (str): The song name or YouTube link to search for.
         """
-        await self.join_voice_channel(ctx)  # Ensure the bot joins the voice channel
+        await self.join_voice_channel(ctx)
         ydl_opts = {
             "format": "bestaudio/best",
             "geo-bypass": True,
@@ -79,7 +94,7 @@ class Music(commands.Cog):
                 and len(info["entries"]) > 0
                 and "url" in info["entries"][0]
             ):
-                info = info["entries"][0]  # Get the first search result
+                info = info["entries"][0]
                 print(f"Found media url: {info['url']}")
             else:
                 print(
@@ -88,33 +103,40 @@ class Music(commands.Cog):
                 await ctx.reply(f'No results found for "{query}"')
                 return
 
-        self.song_queue.append(info)  # Add the song to the queue
+        self.song_queue.append(info)
 
         if self.currently_playing is not None:
-            await self.send_now_playing(ctx, info)  # Send now playing message
+            await self.send_now_playing(ctx, info)
 
     async def send_now_playing(self, ctx, info):
         """
         Sends an embedded message with the current song's details, including title, duration, and thumbnail.
+
+        Parameters:
+        - ctx (commands.Context): The context of the command invocation.
+        - info (dict): Information about the song currently playing.
         """
         embed = discord.Embed(
             title=info["title"], url=info["webpage_url"], color=discord.Color.blurple()
         )
-        embed.set_thumbnail(url=info["thumbnail"])  # Set thumbnail for the embed
+        embed.set_thumbnail(url=info["thumbnail"])
         embed.add_field(
             name="Duration",
-            value=humanize_duration(info["duration"]),  # Format the song's duration
+            value=humanize_duration(info["duration"]),
             inline=False,
         )
-        await ctx.reply(embed=embed)  # Send the embed message
+        await ctx.reply(embed=embed)
 
     async def play_next(self, ctx):
         """
         Plays the next song in the queue.
         If no songs remain, disconnects the bot from the voice channel.
+
+        Parameters:
+        - ctx (commands.Context): The context of the command invocation.
         """
         voice_client = ctx.guild.voice_client
-        if len(self.song_queue) == 0:  # If the queue is empty
+        if len(self.song_queue) == 0:
             if voice_client is not None:
                 await ctx.reply(
                     "There are no songs in the queue to play, disconnecting."
@@ -122,41 +144,36 @@ class Music(commands.Cog):
                 await voice_client.disconnect()
             return
         else:
-            info = self.song_queue.pop(0)  # Get the next song from the queue
-            self.currently_playing = info  # Set the current song to the next one
+            info = self.song_queue.pop(0)
+            self.currently_playing = info
 
             def after_playing(error):
                 """
                 Callback function executed after a song finishes playing.
                 Adds the current song to history, and plays the next song in the queue.
+
+                Parameters:
+                - error (Exception): An error that occurred during playback, if any.
                 """
                 if error:
                     print(f"Error occurred: {error}")
-                self.song_history.append(
-                    self.currently_playing
-                )  # Add the song to history
-                self.currently_playing = None  # Clear the current song
+                self.song_history.append(self.currently_playing)
+                self.currently_playing = None
                 if len(self.song_queue) > 0:
-                    coro = self.play_next(ctx)  # Schedule the next song
+                    coro = self.play_next(ctx)
                     fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                     fut.result()
 
                 else:
-                    coro = (
-                        voice_client.disconnect()
-                    )  # Disconnect if no songs remain in the queue
+                    coro = voice_client.disconnect()
                     fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                     fut.result()
 
-            FFMPEG_OPTIONS = {
-                "options": "-vn"
-            }  # Options for the audio stream (no video)
+            FFMPEG_OPTIONS = {"options": "-vn"}
 
-            source = discord.FFmpegPCMAudio(
-                info["url"], **FFMPEG_OPTIONS
-            )  # Create audio source
-            voice_client.play(source, after=after_playing)  # Play the audio
-            await self.send_now_playing(ctx, info)  # Send now playing message
+            source = discord.FFmpegPCMAudio(info["url"], **FFMPEG_OPTIONS)
+            voice_client.play(source, after=after_playing)
+            await self.send_now_playing(ctx, info)
 
     # ======== Commands ========
 
@@ -176,10 +193,10 @@ class Music(commands.Cog):
         **Description:**
         Adds a song to the queue and plays it if nothing is playing.
         """
-        await self.add_to_queue(ctx, query)  # Add song to the queue
+        await self.add_to_queue(ctx, query)
         voice_client = ctx.guild.voice_client
         if voice_client and not voice_client.is_playing():
-            await self.play_next(ctx)  # Play the song if nothing is playing
+            await self.play_next(ctx)
 
     @commands.command(
         name="stop", help="Stops the current song and clears the song queue."
@@ -194,13 +211,13 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
             if voice_client.is_playing():
-                voice_client.stop()  # Stop the song
-                await voice_client.disconnect()  # Disconnect from the voice channel
-                self.song_queue.clear()  # Clear the song queue
+                voice_client.stop()
+                await voice_client.disconnect()
+                self.song_queue.clear()
                 await ctx.reply("Stopped playing the current song, disconnecting.")
                 return
             else:
-                await voice_client.disconnect()  # Disconnect if no song is playing
+                await voice_client.disconnect()
                 self.song_queue.clear()
                 self.song_history.clear()
         await ctx.reply("I am not playing any songs right now.")
@@ -218,14 +235,12 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
             if voice_client.is_playing():
-                voice_client.pause()  # Pause the current song
+                voice_client.pause()
                 await ctx.reply("Skipped the current song.")
-                self.song_history.append(
-                    self.currently_playing
-                )  # Add the song to history
+                self.song_history.append(self.currently_playing)
 
                 if len(self.song_queue) > 0:
-                    await self.play_next(ctx)  # Play the next song
+                    await self.play_next(ctx)
                 else:
                     await ctx.reply(
                         "There are no songs in the queue to play, disconnecting."
@@ -247,14 +262,10 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
             if len(self.song_history) > 0:
-                voice_client.pause()  # Pause the current song
-                self.song_queue.insert(
-                    0, self.currently_playing
-                )  # Insert the current song back into the queue
-                self.song_queue.insert(
-                    0, self.song_history.pop()
-                )  # Add the last played song from history
-                await self.play_next(ctx)  # Play the song
+                voice_client.pause()
+                self.song_queue.insert(0, self.currently_playing)
+                self.song_queue.insert(0, self.song_history.pop())
+                await self.play_next(ctx)
             else:
                 await ctx.reply("No history before this song.")
         else:
@@ -270,7 +281,7 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            voice_client.pause()  # Pause the playback
+            voice_client.pause()
             await ctx.reply("Pausing playback.")
         else:
             await ctx.reply("I am not playing any songs right now.")
@@ -287,7 +298,7 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_paused():
-            voice_client.resume()  # Resume the playback
+            voice_client.resume()
             await ctx.reply("Resuming playback.")
         else:
             await ctx.reply("Not paused.")
@@ -302,11 +313,9 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            voice_client.pause()  # Pause the current song
-            self.song_queue.insert(
-                0, self.currently_playing
-            )  # Insert the current song at the start of the queue
-            await self.play_next(ctx)  # Play the song again from the start
+            voice_client.pause()
+            self.song_queue.insert(0, self.currently_playing)
+            await self.play_next(ctx)
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -319,7 +328,7 @@ class Music(commands.Cog):
         Clears the song queue if there are any songs in the queue.
         """
         if len(self.song_queue) != 0:
-            self.song_queue.clear()  # Clear the queue
+            self.song_queue.clear()
             await ctx.reply("Cleared the queue.")
         else:
             await ctx.reply("Nothing in the queue to clear.")
@@ -333,7 +342,7 @@ class Music(commands.Cog):
         Clears the song history if there are any songs in history.
         """
         if len(self.song_history) != 0:
-            self.song_history.clear()  # Clear the history
+            self.song_history.clear()
             await ctx.reply("Cleared the history.")
         else:
             await ctx.reply("Nothing in the history to clear.")
@@ -384,5 +393,8 @@ class Music(commands.Cog):
 async def setup(bot):
     """
     Sets up the Music cog by adding it to the bot client.
+
+    Parameters:
+    - bot (commands.Bot): The bot instance to which the cog will be added.
     """
     await bot.add_cog(Music(bot))
