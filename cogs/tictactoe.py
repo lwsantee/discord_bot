@@ -29,17 +29,14 @@ class TicTacToe(commands.Cog):
         """
         Check if a player with the specified mark ('X' or 'O') has won the game.
         """
-        # Check rows for a win
         for row in self.board:
             if all(s == mark for s in row):
                 return True
 
-        # Check columns for a win
         for col in range(3):
             if all(self.board[row][col] == mark for row in range(3)):
                 return True
 
-        # Check diagonals for a win
         if all(self.board[i][i] == mark for i in range(3)):
             return True
 
@@ -59,16 +56,14 @@ class TicTacToe(commands.Cog):
         AI logic for the bot to make the best possible move.
         The AI tries to win, block the player, take the center, take a corner, and then a side.
         """
-        # Check if the bot can win on the next move
         for r in range(3):
             for c in range(3):
                 if self.board[r][c] not in ["X", "O"]:
                     self.board[r][c] = "O"
                     if self.check_winner("O"):
                         return
-                    self.board[r][c] = str(r * 3 + c + 1)  # Reset
+                    self.board[r][c] = str(r * 3 + c + 1)
 
-        # Block player from winning
         for r in range(3):
             for c in range(3):
                 if self.board[r][c] not in ["X", "O"]:
@@ -76,20 +71,17 @@ class TicTacToe(commands.Cog):
                     if self.check_winner("X"):
                         self.board[r][c] = "O"
                         return
-                    self.board[r][c] = str(r * 3 + c + 1)  # Reset
+                    self.board[r][c] = str(r * 3 + c + 1)
 
-        # Take the center if available
         if self.board[1][1] not in ["X", "O"]:
             self.board[1][1] = "O"
             return
 
-        # Take a corner if available
         for r, c in [(0, 0), (0, 2), (2, 0), (2, 2)]:
             if self.board[r][c] not in ["X", "O"]:
                 self.board[r][c] = "O"
                 return
 
-        # Take a side if available
         for r, c in [(0, 1), (1, 0), (1, 2), (2, 1)]:
             if self.board[r][c] not in ["X", "O"]:
                 self.board[r][c] = "O"
@@ -112,9 +104,7 @@ class TicTacToe(commands.Cog):
             return
 
         self.game_in_progress = True
-        self.current_player = (
-            ctx.author
-        )  # Set the current player to the person who starts the game
+        self.current_player = ctx.author
         self.reset_board()
         await ctx.send(
             f"Tic Tac Toe game started! {self.current_player.mention}, you are X. Enter a number (1-9) to make a move.\n```{self.display_board()}```"
@@ -145,7 +135,6 @@ class TicTacToe(commands.Cog):
             await ctx.send("Invalid move! Enter a number between 1 and 9.")
             return
 
-        # Convert 1-9 to board indices
         row, col = divmod(pos - 1, 3)
 
         if self.board[row][col] in ["X", "O"]:
@@ -165,7 +154,6 @@ class TicTacToe(commands.Cog):
             self.game_in_progress = False
             return
 
-        # Bot makes a move
         self.make_best_move()
 
         if self.check_winner("O"):
@@ -177,7 +165,7 @@ class TicTacToe(commands.Cog):
             self.game_in_progress = False
             return
 
-        self.current_player = ctx.author  # Switch to the next player
+        self.current_player = ctx.author
         await ctx.send(
             f"Your turn, {ctx.author.mention}!\n```{self.display_board()}```"
         )
