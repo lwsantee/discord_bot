@@ -48,7 +48,7 @@ class Music(commands.Cog):
         Initializes the Music cog with the bot instance, song queue, and song history.
 
         Parameters:
-        - bot: The bot instance to which the cog will be added.
+        - bot (commands.Bot): The bot instance to which the cog will be added.
         """
         self.bot = bot
         self.song_queue = []
@@ -62,7 +62,7 @@ class Music(commands.Cog):
         Ensures the bot joins the same voice channel as the user who invoked the command.
 
         Parameters:
-        - ctx: The context of the command invocation.
+        - ctx (commands.Context): The context of the command invocation.
         """
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
@@ -77,7 +77,7 @@ class Music(commands.Cog):
         Adds a song to the queue based on the search query.
 
         Parameters:
-        - ctx: The context of the command invocation.
+        - ctx (commands.Context): The context of the command invocation.
         - query (str): The song name or YouTube link to search for.
         """
         await self.join_voice_channel(ctx)
@@ -113,7 +113,7 @@ class Music(commands.Cog):
         Sends an embedded message with the current song's details, including title, duration, and thumbnail.
 
         Parameters:
-        - ctx: The context of the command invocation.
+        - ctx (commands.Context): The context of the command invocation.
         - info (dict): Information about the song currently playing.
         """
         embed = discord.Embed(
@@ -133,7 +133,7 @@ class Music(commands.Cog):
         If no songs remain, disconnects the bot from the voice channel.
 
         Parameters:
-        - ctx: The context of the command invocation.
+        - ctx (commands.Context): The context of the command invocation.
         """
         voice_client = ctx.guild.voice_client
         if len(self.song_queue) == 0:
@@ -153,7 +153,7 @@ class Music(commands.Cog):
                 Adds the current song to history, and plays the next song in the queue.
 
                 Parameters:
-                - error: An error that occurred during playback, if any.
+                - error (Exception): An error that occurred during playback, if any.
                 """
                 if error:
                     print(f"Error occurred: {error}")
@@ -395,6 +395,6 @@ async def setup(bot):
     Sets up the Music cog by adding it to the bot client.
 
     Parameters:
-    - bot: The bot instance to which the cog will be added.
+    - bot (commands.Bot): The bot instance to which the cog will be added.
     """
     await bot.add_cog(Music(bot))
