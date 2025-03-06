@@ -14,7 +14,10 @@ load_dotenv()
 @bot.event
 async def on_ready():
     """
-    Event triggered when the bot is ready.
+    Event triggered when the bot has successfully connected to Discord and is ready to operate.
+
+    This event sends a message to a specific channel to notify that the bot is online.
+    It also loads all the cogs from the "cogs" directory, except the "__init__.py" file.
     """
     print(f"Logged in as {bot.user.name}")
 

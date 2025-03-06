@@ -7,6 +7,12 @@ from discord.ext import commands
 def humanize_duration(seconds: int) -> str:
     """
     Converts a duration given in seconds to a human-readable format (e.g., "1 hour 30 minutes").
+
+    Parameters:
+    - seconds (int): The duration in seconds to be converted.
+
+    Returns:
+    - str: The human-readable format of the duration.
     """
     SECONDS = 1
     MINUTES = 60 * SECONDS
@@ -40,6 +46,9 @@ class Music(commands.Cog):
     def __init__(self, bot):
         """
         Initializes the Music cog with the bot instance, song queue, and song history.
+
+        Parameters:
+        - bot: The bot instance to which the cog will be added.
         """
         self.bot = bot
         self.song_queue = []
@@ -51,6 +60,9 @@ class Music(commands.Cog):
     async def join_voice_channel(self, ctx):
         """
         Ensures the bot joins the same voice channel as the user who invoked the command.
+
+        Parameters:
+        - ctx: The context of the command invocation.
         """
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
@@ -63,6 +75,10 @@ class Music(commands.Cog):
     async def add_to_queue(self, ctx, query):
         """
         Adds a song to the queue based on the search query.
+
+        Parameters:
+        - ctx: The context of the command invocation.
+        - query (str): The song name or YouTube link to search for.
         """
         await self.join_voice_channel(ctx)
         ydl_opts = {
@@ -95,6 +111,10 @@ class Music(commands.Cog):
     async def send_now_playing(self, ctx, info):
         """
         Sends an embedded message with the current song's details, including title, duration, and thumbnail.
+
+        Parameters:
+        - ctx: The context of the command invocation.
+        - info (dict): Information about the song currently playing.
         """
         embed = discord.Embed(
             title=info["title"], url=info["webpage_url"], color=discord.Color.blurple()
@@ -111,6 +131,9 @@ class Music(commands.Cog):
         """
         Plays the next song in the queue.
         If no songs remain, disconnects the bot from the voice channel.
+
+        Parameters:
+        - ctx: The context of the command invocation.
         """
         voice_client = ctx.guild.voice_client
         if len(self.song_queue) == 0:
@@ -128,6 +151,9 @@ class Music(commands.Cog):
                 """
                 Callback function executed after a song finishes playing.
                 Adds the current song to history, and plays the next song in the queue.
+
+                Parameters:
+                - error: An error that occurred during playback, if any.
                 """
                 if error:
                     print(f"Error occurred: {error}")
@@ -367,5 +393,8 @@ class Music(commands.Cog):
 async def setup(bot):
     """
     Sets up the Music cog by adding it to the bot client.
+
+    Parameters:
+    - bot: The bot instance to which the cog will be added.
     """
     await bot.add_cog(Music(bot))

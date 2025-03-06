@@ -5,6 +5,9 @@ class TicTacToe(commands.Cog):
     def __init__(self, bot):
         """
         Initializes the TicTacToe cog with the bot instance, game status, current player, and board.
+
+        Parameters:
+        - bot (commands.Bot): The bot instance to which the cog will be added.
         """
         self.bot = bot
         self.game_in_progress = False
@@ -22,12 +25,21 @@ class TicTacToe(commands.Cog):
     def display_board(self):
         """
         Return the current state of the TicTacToe board as a string for display.
+
+        Returns:
+        - str: The current state of the TicTacToe board.
         """
         return "\n".join([" | ".join(row) for row in self.board])
 
     def check_winner(self, mark):
         """
         Check if a player with the specified mark ('X' or 'O') has won the game.
+
+        Parameters:
+        - mark (str): The mark of the player ('X' or 'O').
+
+        Returns:
+        - bool: True if the player with the given mark has won, False otherwise.
         """
         for row in self.board:
             if all(s == mark for s in row):
@@ -48,6 +60,9 @@ class TicTacToe(commands.Cog):
     def is_full(self):
         """
         Check if the board is full (i.e., no empty cells available).
+
+        Returns:
+        - bool: True if the board is full, False otherwise.
         """
         return all(cell in ["X", "O"] for row in self.board for cell in row)
 
@@ -188,5 +203,8 @@ class TicTacToe(commands.Cog):
 async def setup(bot):
     """
     Sets up the TicTacToe cog by adding it to the bot client.
+
+    Parameters:
+    - bot (commands.Bot): The bot instance to which the cog will be added.
     """
     await bot.add_cog(TicTacToe(bot))
