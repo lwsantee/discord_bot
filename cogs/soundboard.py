@@ -38,8 +38,8 @@ class Soundboard(commands.Cog):
     :param client: The Discord bot client instance.
     """
 
-    def __init__(self, client):
-        self.client = client  # Discord bot client
+    def __init__(self, bot):
+        self.bot = bot  # Discord bot client
         self.sounds: dict[str, Sound] = self.init_sounds()
 
     def init_sounds(self) -> dict[str, Sound]:
@@ -110,14 +110,26 @@ class Soundboard(commands.Cog):
             json[name] = sound.to_json()
         return json
 
-    @commands.group(name="sound", invoke_without_command=True)
+    @commands.group(
+        name="sound",
+        invoke_without_command=True,
+        help="Allows the user to interact with the integrated soundboard.",
+    )
     async def sound(self, ctx):
         """
-        Displays available sound commands.
+        **Usage:** `.sound <command>`
 
-        :param ctx: The command context.
+        **Parameters:**
+        - `<command>` - The command to perform on the soundboard.
+
+        **Example:**
+        - `.sound add <url> <name>` → "Downloads a soundbyte from <url> and adds it to the soundboard under <name>."
+        - `.sound rm` → "Display a sound menu to remove a sound."
+        - `.sound pick` → "Display the soundboard to play a sound."
+
+        **Description:**
+        Allows the user to interact with the integrated soundboard.
         """
-
         await ctx.reply(
             "```\n"
             "add <url> <name>  Downloads a soundbyte from <url> and adds it to the soundboard under <name>\n"
@@ -370,12 +382,11 @@ def file_size(url: str) -> int:
     return int(process.stdout.decode().strip("\" \n'"))
 
 
-# Function to set up the Music cog
-async def setup(client: commands.Bot):
+async def setup(bot: commands.Bot):
     """
     Adds the Soundboard cog to the bot.
 
     :param client: The Discord bot client.
     """
 
-    await client.add_cog(Soundboard(client))
+    await bot.add_cog(Soundboard(bot))

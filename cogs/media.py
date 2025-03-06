@@ -14,11 +14,13 @@ load_dotenv()
 class Media(commands.Cog):
     def __init__(self, bot):
         """
-        Initializes the Media class with bot and API keys.
+        Initializes the Media cog with the bot instance and API keys.
         """
         self.bot = bot
         self.cx = os.getenv("CX")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    # ======== Data Processing ========
 
     async def fetch_search_results(self, search_url, search_params):
         """
@@ -152,30 +154,71 @@ class Media(commands.Cog):
                     ctx, query, number, "GIF", img_type="animated"
                 )
 
-    @commands.command(name="image")
-    async def image_search(self, ctx, *, query: str):
+    # ======== Commands ========
+
+    @commands.command(
+        name="image", help="Searches for an image based on the provided query."
+    )
+    async def image_command(self, ctx, *, query: str):
         """
-        Searches for an image based on the provided query.
+        **Usage:** `.image <query> <selection>`
+
+        **Parameters:**
+        - `<query>` - The query used to find an image.
+        - `<selection>` (optional) - A number (1-10) to chose a specific result out of the found images.
+
+        **Example:**
+        - `.image dog walking in park` → "Returns a random image of a dog walking in the park."
+        - `.image cat playing piano 4` → "Returns the 4th found image of a cat playing the piano."
+
+        **Description:**
+        Finds a specific image based on the provided query and result selection. If no result selection is provided, a random selection out of the found results will be returned.
         """
         await self.image_search_helper(ctx, query, False)
 
-    @commands.command(name="gif")
-    async def gif_search(self, ctx, *, query: str):
+    @commands.command(
+        name="gif", help="Searches for a GIF based on the provided query."
+    )
+    async def gif_command(self, ctx, *, query: str):
         """
-        Searches for a GIF based on the provided query.
+        **Usage:** `.gif <query> <selection>`
+
+        **Parameters:**
+        - `<query>` - The query used to find a GIF.
+        - `<selection>` (optional) - A number (1-10) to chose a specific result out of the found GIFs.
+
+        **Example:**
+        - `.gif dog walking in park` → "Returns a random GIF of a dog walking in the park."
+        - `.gif cat playing piano 4` → "Returns the 4th found GIF of a cat playing the piano."
+
+        **Description:**
+        Finds a specific GIF based on the provided query and result selection. If no result selection is provided, a random selection out of the found results will be returned.
         """
         await self.image_search_helper(ctx, query, True)
 
-    @commands.command(name="video")
-    async def video_search(self, ctx, *, query):
+    @commands.command(
+        name="video", help="Searches for a YouTube video based on the provided query."
+    )
+    async def video_command(self, ctx, *, query):
         """
-        Searches for a YouTube video based on the provided query.
+        **Usage:** `.video <query> <selection>`
+
+        **Parameters:**
+        - `<query>` - The query used to find an video.
+        - `<selection>` (optional) - A number (1-10) to chose a specific result out of the found videos.
+
+        **Example:**
+        - `.video dog walking in park` → "Returns a random video of a dog walking in the park."
+        - `.video cat playing piano 4` → "Returns the 4th found video of a cat playing the piano."
+
+        **Description:**
+        Finds a specific video based on the provided query and result selection. If no result selection is provided, a random selection out of the found results will be returned.
         """
         await self.youtube_video_search(ctx, query)
 
 
 async def setup(bot):
     """
-    Adds the Media cog to the bot.
+    Sets up the Media cog by adding it to the bot client.
     """
     await bot.add_cog(Media(bot))

@@ -38,14 +38,16 @@ def humanize_duration(seconds: int) -> str:
 
 # The Music class defines the behavior of the music bot commands
 class Music(commands.Cog):
-    def __init__(self, client):
+    def __init__(self, bot):
         """
-        Initializes the Music class with the bot client, and initializes empty song queue and history.
+        Initializes the Music cog with the bot instance, song queue, and song history.
         """
-        self.client = client  # Bot client
+        self.bot = bot  # Bot client
         self.song_queue = []  # Song queue
         self.song_history = []  # List of previously played songs
         self.currently_playing = None  # The current song being played
+
+    # ======== Data Processing ========
 
     async def join_voice_channel(self, ctx):
         """
@@ -136,14 +138,14 @@ class Music(commands.Cog):
                 self.currently_playing = None  # Clear the current song
                 if len(self.song_queue) > 0:
                     coro = self.play_next(ctx)  # Schedule the next song
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                     fut.result()
 
                 else:
                     coro = (
                         voice_client.disconnect()
                     )  # Disconnect if no songs remain in the queue
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                     fut.result()
 
             FFMPEG_OPTIONS = {
@@ -156,9 +158,22 @@ class Music(commands.Cog):
             voice_client.play(source, after=after_playing)  # Play the audio
             await self.send_now_playing(ctx, info)  # Send now playing message
 
-    @commands.command()
-    async def play(self, ctx, *, query):
+    # ======== Commands ========
+
+    @commands.command(
+        name="play", help="Adds a song to the queue and plays it if nothing is playing."
+    )
+    async def play_command(self, ctx, *, query):
         """
+        **Usage:** `.play <query>`
+
+        **Parameters:**
+        - `<query>` - The name of (or link to) a YouTube video.
+
+        **Example:**
+        - `.play Never Gonna Give You Up` → "Joins the voice channel the user is in and begins playing Never Gonna Give You Up."
+
+        **Description:**
         Adds a song to the queue and plays it if nothing is playing.
         """
         await self.add_to_queue(ctx, query)  # Add song to the queue
@@ -166,11 +181,15 @@ class Music(commands.Cog):
         if voice_client and not voice_client.is_playing():
             await self.play_next(ctx)  # Play the song if nothing is playing
 
-    @commands.command()
-    async def stop(self, ctx):
+    @commands.command(
+        name="stop", help="Stops the current song and clears the song queue."
+    )
+    async def stop_command(self, ctx):
         """
-        Stops the current song and clears the song queue.
-        Disconnects the bot from the voice channel.
+        **Usage:** `.stop`
+
+        **Description:**
+        Stops the current song and clears the song queue. Disconnects the bot from the voice channel if no song is playing.
         """
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
@@ -186,10 +205,15 @@ class Music(commands.Cog):
                 self.song_history.clear()
         await ctx.reply("I am not playing any songs right now.")
 
-    @commands.command()
-    async def skip(self, ctx):
+    @commands.command(
+        name="skip", help="Skips the current song and plays the next one in the queue."
+    )
+    async def skip_command(self, ctx):
         """
-        Skips the current song and plays the next one in the queue.
+        **Usage:** `.skip`
+
+        **Description:**
+        Skips the current song and plays the next one in the queue. If no songs remain, disconnects the bot from the voice channel.
         """
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
@@ -210,10 +234,15 @@ class Music(commands.Cog):
         else:
             await ctx.reply("I am not playing any songs right now.")
 
-    @commands.command()
-    async def back(self, ctx):
+    @commands.command(
+        name="back", help="Goes back to the previous song in history if available."
+    )
+    async def back_command(self, ctx):
         """
-        Goes back to the previous song in history if available.
+        **Usage:** `.back`
+
+        **Description:**
+        Goes back to the previous song in history if available. If no history exists, informs the user.
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
@@ -231,10 +260,13 @@ class Music(commands.Cog):
         else:
             await ctx.reply("I am not playing any songs right now.")
 
-    @commands.command()
-    async def pause(self, ctx):
+    @commands.command(name="pause", help="Pauses the current song if it's playing.")
+    async def pause_command(self, ctx):
         """
-        Pauses the current song if it's playing.
+        **Usage:** `.pause`
+
+        **Description:**
+        Pauses the current song if it's playing. If no song is playing, informs the user.
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
@@ -243,10 +275,15 @@ class Music(commands.Cog):
         else:
             await ctx.reply("I am not playing any songs right now.")
 
-    @commands.command()
-    async def resume(self, ctx):
+    @commands.command(
+        name="resume", help="Resumes the playback of the current song if it's paused."
+    )
+    async def resume_command(self, ctx):
         """
-        Resumes the playback of the current song if it's paused.
+        **Usage:** `.resume`
+
+        **Description:**
+        Resumes the playback of the current song if it's paused. If no song is paused, informs the user.
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_paused():
@@ -255,10 +292,13 @@ class Music(commands.Cog):
         else:
             await ctx.reply("Not paused.")
 
-    @commands.command()
-    async def rewind(self, ctx):
+    @commands.command(name="rewind", help="Rewinds the current song to the start.")
+    async def rewind_command(self, ctx):
         """
-        Rewinds the current song to the start.
+        **Usage:** `.rewind`
+
+        **Description:**
+        Rewinds the current song to the start and plays it again. If no song is playing, informs the user.
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
@@ -270,10 +310,13 @@ class Music(commands.Cog):
         else:
             await ctx.reply("I am not playing any songs right now.")
 
-    @commands.command()
-    async def clear(self, ctx):
+    @commands.command(name="clear", help="Clears the song queue.")
+    async def clear_queue_command(self, ctx):
         """
-        Clears the song queue.
+        **Usage:** `.clear`
+
+        **Description:**
+        Clears the song queue if there are any songs in the queue.
         """
         if len(self.song_queue) != 0:
             self.song_queue.clear()  # Clear the queue
@@ -281,10 +324,13 @@ class Music(commands.Cog):
         else:
             await ctx.reply("Nothing in the queue to clear.")
 
-    @commands.command()
-    async def clearhistory(self, ctx):
+    @commands.command(name="clearhistory", help="Clears the song history.")
+    async def clear_history_command(self, ctx):
         """
-        Clears the song history.
+        **Usage:** `.clearhistory`
+
+        **Description:**
+        Clears the song history if there are any songs in history.
         """
         if len(self.song_history) != 0:
             self.song_history.clear()  # Clear the history
@@ -292,9 +338,14 @@ class Music(commands.Cog):
         else:
             await ctx.reply("Nothing in the history to clear.")
 
-    @commands.command()
-    async def queue(self, ctx):
+    @commands.command(
+        name="queue", help="Displays the list of songs currently in the queue."
+    )
+    async def queue_command(self, ctx):
         """
+        **Usage:** `.queue`
+
+        **Description:**
         Displays the list of songs currently in the queue.
         """
         embed = discord.Embed(
@@ -308,9 +359,14 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
-    async def history(self, ctx):
+    @commands.command(
+        name="history", help="Displays the list of previously played songs."
+    )
+    async def history_command(self, ctx):
         """
+        **Usage:** `.history`
+
+        **Description:**
         Displays the list of previously played songs.
         """
         embed = discord.Embed(
@@ -325,9 +381,8 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
 
-# Function to set up the Music cog
-async def setup(client):
+async def setup(bot):
     """
-    Adds the Music cog to the bot client.
+    Sets up the Music cog by adding it to the bot client.
     """
-    await client.add_cog(Music(client))
+    await bot.add_cog(Music(bot))

@@ -4,7 +4,7 @@ from discord.ext import commands
 class TicTacToe(commands.Cog):
     def __init__(self, bot):
         """
-        Initialize the TicTacToe game with the bot, game status, current player, and board.
+        Initializes the TicTacToe cog with the bot instance, game status, current player, and board.
         """
         self.bot = bot
         self.game_in_progress = False
@@ -93,10 +93,15 @@ class TicTacToe(commands.Cog):
                 self.board[r][c] = "O"
                 return
 
-    @commands.command(name="start")
-    async def start_game(self, ctx):
+    @commands.command(
+        name="start", help="Starts a new TicTacToe game if no game is in progress."
+    )
+    async def start_command(self, ctx):
         """
-        Start a new TicTacToe game if no game is in progress.
+        Usage: `.start`
+
+        Description:
+        Starts a new TicTacToe game if no game is in progress.
         """
         if self.game_in_progress:
             await ctx.send("A game is already in progress!")
@@ -111,9 +116,17 @@ class TicTacToe(commands.Cog):
             f"Tic Tac Toe game started! {self.current_player.mention}, you are X. Enter a number (1-9) to make a move.\n```{self.display_board()}```"
         )
 
-    @commands.command(name="move")
-    async def make_move(self, ctx, pos: int):
+    @commands.command(
+        name="move", help="Places the move on the board at the provided index (1-9)."
+    )
+    async def move_command(self, ctx, pos: int):
         """
+        Usage: `.move <position>`
+
+        Examples:
+        - `.move 5` → Player places an "X" at position 5 on the board.
+
+        Description:
         Places the move on the board at the provided index (1-9).
         """
         if not self.game_in_progress:
@@ -165,10 +178,13 @@ class TicTacToe(commands.Cog):
             f"Your turn, {ctx.author.mention}!\n```{self.display_board()}```"
         )
 
-    @commands.command(name="end")
-    async def end_game(self, ctx):
+    @commands.command(name="end", help="Ends the current game if one is in progress.")
+    async def end_command(self, ctx):
         """
-        End the current game if one is in progress.
+        Usage: `.end`
+
+        Description:
+        Ends the current game if one is in progress.
         """
         if self.game_in_progress:
             self.game_in_progress = False
@@ -177,8 +193,8 @@ class TicTacToe(commands.Cog):
             await ctx.send("No game in progress to end.")
 
 
-async def setup(client):
+async def setup(bot):
     """
-    Add the TicTacToe cog to the bot.
+    Sets up the TicTacToe cog by adding it to the bot client.
     """
-    await client.add_cog(TicTacToe(client))
+    await bot.add_cog(TicTacToe(bot))
