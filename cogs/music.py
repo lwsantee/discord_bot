@@ -169,7 +169,9 @@ class Music(commands.Cog):
                     fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                     fut.result()
 
-            source = discord.FFmpegPCMAudio(info["url"], options="-vn -af loudnorm=I=-14:TP=-2:LRA=11")
+            source = discord.FFmpegPCMAudio(
+                info["url"], options="-vn -af loudnorm=I=-14:TP=-2:LRA=11"
+            )
             voice_client.play(source, after=after_playing)
             await self.send_now_playing(ctx, info)
 
