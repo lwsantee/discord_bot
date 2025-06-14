@@ -3,3 +3,4 @@ __pycache__/
 .virtual/
 sounds.json
 sounds/
+poker_scores.json
