@@ -1,7 +1,10 @@
 import asyncio
+from re import search
 import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands
+import os
+import urllib.parse
 
 
 def humanize_duration(seconds: int) -> str:
@@ -176,6 +179,34 @@ class Music(commands.Cog):
             await self.send_now_playing(ctx, info)
 
     # ======== Commands ========
+
+    @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
+    async def login_command(self, ctx): 
+        """
+        **Usage:** `.login`
+
+        **Example:** 
+        - `.login` -> responds with a link to login to spotify 
+
+        **Description:** 
+        Shares a link to login to a Spotify Premium account 
+        """
+        
+        search_params = {
+            "scope": "streaming user-read-email user-read-private user-read-playback-state",
+            "response_type": "code",
+            "client_id": os.getenv("SPOTIFY_CLIENT_ID"),
+            "redirect_uri": os.getenv("CALLBACK_URI"),
+        }
+        query_string = urllib.parse.urlencode(search_params)
+        url = f"https://accounts.spotify.com/authorize/?{query_string}"
+
+        embed = discord.Embed(
+            title="Spotify Premium Login", url=url, color=discord.Color.blurple()
+        )
+
+        await ctx.send(embed=embed)
+        
 
     @commands.command(
         name="play", help="Adds a song to the queue and plays it if nothing is playing."
