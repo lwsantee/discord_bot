@@ -7,3 +7,4 @@
 # Fixes 
 
 - [ ] .play command seems to append the entire existing queue followed by the requested song
+- [ ] potentially move references to the name 'Discord Bot' into an env var to allow customizing the bot name
