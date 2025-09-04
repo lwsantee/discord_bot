@@ -74,7 +74,7 @@ def set_volume_percent(percent: int):
 
 
 def start_librespot():
-    global ffmpeg, librespot
+    global librespot 
     librespot = subprocess.Popen([
         "librespot",
         "--name", "Discord Bot",

@@ -5,6 +5,11 @@ import yt_dlp as youtube_dl
 from discord.ext import commands
 import os
 import urllib.parse
+import subprocess
+import requests
+import urllib.parse
+import json
+import spotify_controller
 
 
 def humanize_duration(seconds: int) -> str:
@@ -54,9 +59,6 @@ class Music(commands.Cog):
         - bot (commands.Bot): The bot instance to which the cog will be added.
         """
         self.bot = bot
-        self.song_queue = []
-        self.song_history = []
-        self.currently_playing = None
 
     # ======== Data Processing ========
 
@@ -84,32 +86,13 @@ class Music(commands.Cog):
         - query (str): The song name or YouTube link to search for.
         """
         await self.join_voice_channel(ctx)
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "geo-bypass": True,
-            "rm-cache-dir": True,
-        }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch:{query}", download=False)
-            if (
-                info
-                and "entries" in info
-                and len(info["entries"]) > 0
-                and "url" in info["entries"][0]
-            ):
-                info = info["entries"][0]
-                print(f"Found media url: {info['url']}")
-            else:
-                print(
-                    f"Got an unexpected result from YouTube search. Query: {query}. Response: {info}"
-                )
-                await ctx.reply(f'No results found for "{query}"')
-                return
+        search_results = spotify_controller.search(query)
+        track_uri = search_results["tracks"]["items"][0]["uri"]
+        print("adding to queue", spotify_controller.add_to_queue(track_uri))
+        spotify_controller.switch_to_device()
 
-        self.song_queue.append(info)
-
-        if self.currently_playing is not None:
-            await self.send_now_playing(ctx, info)
+        # if self.currently_playing is not None:
+        #     await self.send_now_playing(ctx, info)
 
     async def send_now_playing(self, ctx, info):
         """
@@ -139,46 +122,25 @@ class Music(commands.Cog):
         - ctx (commands.Context): The context of the command invocation.
         """
         voice_client = ctx.guild.voice_client
-        if len(self.song_queue) == 0:
-            if voice_client is not None:
-                await ctx.reply(
-                    "There are no songs in the queue to play, disconnecting."
-                )
-                await voice_client.disconnect()
-            return
-        else:
-            info = self.song_queue.pop(0)
-            self.currently_playing = info
+        # source = discord.PCMAudio(spotify_controller.librespot.stdout)
+        # source = discord.FFmpegPCMAudio("/home/aj/Downloads/Come Out Ye Black and Tans.opus")
+        # source = discord.FFmpegPCMAudio(source=spotify_controller.ffmpeg.stdout, pipe=True)
+        source = discord.FFmpegPCMAudio(
+            pipe=True, 
+            source=spotify_controller.librespot.stdout, 
+            before_options="-f s16le -ar 44100 -ac 2",
+            options="-f s16le -ar 48000 -ac 2",     
+        )
 
-            def after_playing(error):
-                """
-                Callback function executed after a song finishes playing.
-                Adds the current song to history, and plays the next song in the queue.
-
-                Parameters:
-                - error (Exception): An error that occurred during playback, if any.
-                """
-                if error:
-                    print(f"Error occurred: {error}")
-                self.song_history.append(self.currently_playing)
-                self.currently_playing = None
-                if len(self.song_queue) > 0:
-                    coro = self.play_next(ctx)
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-                    fut.result()
-
-                else:
-                    coro = voice_client.disconnect()
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-                    fut.result()
-
-            source = discord.FFmpegPCMAudio(
-                info["url"], options="-vn -af loudnorm=I=-14:TP=-2:LRA=11"
-            )
-            voice_client.play(source, after=after_playing)
-            await self.send_now_playing(ctx, info)
+        voice_client.play(source)
+        # await self.send_now_playing(ctx, info)
 
     # ======== Commands ========
+
+    @commands.command(name="join", help="Make the bot join the call")
+    async def join_command(self, ctx):
+        await self.join_voice_channel(ctx)
+
 
     @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
     async def login_command(self, ctx): 
@@ -206,6 +168,7 @@ class Music(commands.Cog):
         )
 
         await ctx.send(embed=embed)
+        return 
         
 
     @commands.command(

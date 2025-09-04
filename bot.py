@@ -7,11 +7,14 @@ import threading
 import base64
 import requests
 import json
+from spotify_controller import start_librespot
 
 
+librespot = None 
 app = Flask(__name__)
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 bot = commands.Bot(command_prefix=".", help_command=None, intents=intents)
 
 load_dotenv()
@@ -19,6 +22,7 @@ load_dotenv()
 
 @app.route("/callback", methods=["GET"])
 def callback():
+    global librespot
     code = request.args.get("code")
     if code is None:
         return {"error": "Missing 'code' query parameter"}, 400
@@ -36,6 +40,7 @@ def callback():
         print(body)
         os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
         os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
+        start_librespot()
         return "Login Successful", 200
     else:
         return response.text, 400
