@@ -6,7 +6,7 @@
 
 # Fixes 
 
-- [ ] .play command seems to append the entire existing queue followed by the requested song
-- [ ] potentially move references to the name 'Discord Bot' into an env var to allow customizing the bot name
+- [x] .play command seems to append the entire existing queue followed by the requested song
+- [x] potentially move references to the name 'Discord Bot' into an env var to allow customizing the bot name
 - [ ] break authentication server out into separate microservice
 - [ ] make errors relating to being logged out more obvious
