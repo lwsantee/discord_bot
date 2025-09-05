@@ -36,7 +36,7 @@ jobs:
   build-push-bot:
     runs-on: ubuntu-latest
     env:
-      platforms: 'linux/amd64,linux/arm64'
+      platforms: 'linux/amd64'
       registry: 'ghcr.io/${{ github.repository_owner }}'
     steps:
       - name: Generate tags
@@ -84,7 +84,7 @@ jobs:
   build-push-auth:
     runs-on: ubuntu-latest
     env:
-      platforms: 'linux/amd64,linux/arm64'
+      platforms: 'linux/amd64'
       registry: 'ghcr.io/${{ github.repository_owner }}'
     steps:
       - name: Generate tags
