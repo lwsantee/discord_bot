@@ -24,6 +24,7 @@ load_dotenv()
 def callback():
     global librespot
     code = request.args.get("code")
+    state = request.args.get("state")
     if code is None:
         return {"error": "Missing 'code' query parameter"}, 400
 

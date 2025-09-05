@@ -10,6 +10,15 @@ import requests
 import urllib.parse
 import json
 import spotify_controller
+import random
+
+
+def generate_random(length: int):
+    text = "";
+    possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for i in range(length):
+        text += random.choice(possible)
+    return text;
 
 
 def humanize_duration(seconds: int) -> str:
@@ -161,6 +170,7 @@ class Music(commands.Cog):
             "response_type": "code",
             "client_id": os.getenv("SPOTIFY_CLIENT_ID"),
             "redirect_uri": os.getenv("CALLBACK_URI"),
+            "state": generate_random(128),
         }
         query_string = urllib.parse.urlencode(search_params)
         url = f"https://accounts.spotify.com/authorize/?{query_string}"
