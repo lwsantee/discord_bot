@@ -78,6 +78,15 @@ class Music(commands.Cog):
         Parameters:
         - ctx (commands.Context): The context of the command invocation.
         """
+
+        if os.getenv("SPOTIFY_ACCESS_TOKEN") is None:
+            response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
+            if 300 > response.status_code >= 200:
+                os.environ["SPOTIFY_ACCESS_TOKEN"] = response.text
+
+        if spotify_controller.librespot is None:
+            spotify_controller.start_librespot()
+
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
                 await ctx.author.voice.channel.connect()
@@ -132,6 +141,7 @@ class Music(commands.Cog):
         Parameters:
         - ctx (commands.Context): The context of the command invocation.
         """
+
         voice_client = ctx.guild.voice_client
         # source = discord.PCMAudio(spotify_controller.librespot.stdout)
         # source = discord.FFmpegPCMAudio("/home/aj/Downloads/Come Out Ye Black and Tans.opus")
@@ -147,11 +157,6 @@ class Music(commands.Cog):
         # await self.send_now_playing(ctx, info)
 
     # ======== Commands ========
-
-    @commands.command(name="join", help="Make the bot join the call")
-    async def join_command(self, ctx):
-        await self.join_voice_channel(ctx)
-
 
     @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
     async def login_command(self, ctx): 
@@ -169,8 +174,8 @@ class Music(commands.Cog):
             "scope": "streaming user-read-email user-read-private user-read-playback-state",
             "response_type": "code",
             "client_id": os.getenv("SPOTIFY_CLIENT_ID"),
-            "redirect_uri": os.getenv("CALLBACK_URI"),
-            "state": generate_random(128),
+            "redirect_uri": f"{os.getenv('AUTH_SERVER')}/callback",
+            "state": os.getenv("AUTH_SERVER_SECURITY"),
         }
         query_string = urllib.parse.urlencode(search_params)
         url = f"https://accounts.spotify.com/authorize/?{query_string}"
