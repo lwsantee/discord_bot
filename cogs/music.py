@@ -86,10 +86,12 @@ class Music(commands.Cog):
         - query (str): The song name or YouTube link to search for.
         """
         await self.join_voice_channel(ctx)
-        search_results = spotify_controller.search(query)
+        search_results = spotify_controller.search(f'"{query}"')
         track_uri = search_results["tracks"]["items"][0]["uri"]
         print("adding to queue", spotify_controller.add_to_queue(track_uri))
         spotify_controller.switch_to_device()
+        if not spotify_controller.is_playing():
+            spotify_controller.play()
 
         # if self.currently_playing is not None:
         #     await self.send_now_playing(ctx, info)
@@ -228,18 +230,7 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
-            if voice_client.is_playing():
-                voice_client.pause()
-                await ctx.reply("Skipped the current song.")
-                self.song_history.append(self.currently_playing)
-
-                if len(self.song_queue) > 0:
-                    await self.play_next(ctx)
-                else:
-                    await ctx.reply(
-                        "There are no songs in the queue to play, disconnecting."
-                    )
-                    await voice_client.disconnect()
+            spotify_controller.skip("next")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -255,13 +246,7 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            if len(self.song_history) > 0:
-                voice_client.pause()
-                self.song_queue.insert(0, self.currently_playing)
-                self.song_queue.insert(0, self.song_history.pop())
-                await self.play_next(ctx)
-            else:
-                await ctx.reply("No history before this song.")
+            spotify_controller.skip("previous")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -274,11 +259,10 @@ class Music(commands.Cog):
         Pauses the current song if it's playing. If no song is playing, informs the user.
         """
         voice_client = ctx.guild.voice_client
-        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            voice_client.pause()
-            await ctx.reply("Pausing playback.")
+        if spotify_controller.is_playing():
+            spotify_controller.pause()
         else:
-            await ctx.reply("I am not playing any songs right now.")
+            spotify_controller.play()
 
     @commands.command(
         name="resume", help="Resumes the playback of the current song if it's paused."
