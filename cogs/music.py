@@ -1,16 +1,10 @@
-import asyncio
-from re import search
 import discord
-import yt_dlp as youtube_dl
 from discord.ext import commands
 import os
 import urllib.parse
-import subprocess
 import requests
 import urllib.parse
-import json
 import spotify_controller
-import random
 
 
 def humanize_duration(seconds: int) -> str:
@@ -75,6 +69,9 @@ class Music(commands.Cog):
             response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
             if 300 > response.status_code >= 200:
                 os.environ["SPOTIFY_ACCESS_TOKEN"] = response.text
+            else: 
+                await ctx.reply("You are logged out.")
+                await self.login_command(ctx)
 
         if spotify_controller.librespot is None:
             spotify_controller.start_librespot()
@@ -135,9 +132,6 @@ class Music(commands.Cog):
         """
 
         voice_client = ctx.guild.voice_client
-        # source = discord.PCMAudio(spotify_controller.librespot.stdout)
-        # source = discord.FFmpegPCMAudio("/home/aj/Downloads/Come Out Ye Black and Tans.opus")
-        # source = discord.FFmpegPCMAudio(source=spotify_controller.ffmpeg.stdout, pipe=True)
         source = discord.FFmpegPCMAudio(
             pipe=True, 
             source=spotify_controller.librespot.stdout, 
@@ -161,7 +155,6 @@ class Music(commands.Cog):
         **Description:** 
         Shares a link to login to a Spotify Premium account 
         """
-        
         search_params = {
             "scope": "streaming user-read-email user-read-private user-read-playback-state",
             "response_type": "code",
@@ -237,6 +230,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
             spotify_controller.skip("next")
+            await ctx.reply("Skipping to the next song")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -253,6 +247,7 @@ class Music(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
             spotify_controller.skip("previous")
+            await ctx.reply("Returning to previous song")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -264,11 +259,11 @@ class Music(commands.Cog):
         **Description:**
         Pauses the current song if it's playing. If no song is playing, informs the user.
         """
-        voice_client = ctx.guild.voice_client
         if spotify_controller.is_playing():
             spotify_controller.pause()
+            await ctx.reply("Pausing playback")
         else:
-            spotify_controller.play()
+            await ctx.reply("Already paused. You may have meant to use `.resume`")
 
     @commands.command(
         name="resume", help="Resumes the playback of the current song if it's paused."
@@ -280,12 +275,11 @@ class Music(commands.Cog):
         **Description:**
         Resumes the playback of the current song if it's paused. If no song is paused, informs the user.
         """
-        voice_client = ctx.guild.voice_client
-        if voice_client and voice_client.is_paused():
-            voice_client.resume()
-            await ctx.reply("Resuming playback.")
+        if not spotify_controller.is_playing():
+            spotify_controller.play()
+            await ctx.reply("Resuming playback")
         else:
-            await ctx.reply("Not paused.")
+            await ctx.reply("Already playing. You may have meant to use `.pause`")
 
     @commands.command(name="rewind", help="Rewinds the current song to the start.")
     async def rewind_command(self, ctx):
