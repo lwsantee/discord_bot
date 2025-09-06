@@ -13,14 +13,6 @@ import spotify_controller
 import random
 
 
-def generate_random(length: int):
-    text = "";
-    possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for i in range(length):
-        text += random.choice(possible)
-    return text;
-
-
 def humanize_duration(seconds: int) -> str:
     """
     Converts a duration given in seconds to a human-readable format (e.g., "1 hour 30 minutes").
@@ -185,7 +177,6 @@ class Music(commands.Cog):
         )
 
         await ctx.send(embed=embed)
-        return 
         
 
     @commands.command(
