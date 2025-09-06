@@ -1,0 +1,146 @@
+name: "Build Crisisbot Image"
+
+permissions:
+  contents: read
+  packages: write 
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore: 
+      - 'README.md'
+      - 'LICENSE'
+      - 'screenshots/'
+  push:
+    branches:
+      - main
+    paths-ignore: 
+      - 'README.md'
+      - 'LICENSE'
+      - 'screenshots/'
+  
+  # Run at midnight UTC every Sunday    
+  schedule:
+    - cron: '0 0 * * 0'  
+
+  # Enable a button on Github to manually trigger builds 
+  workflow_dispatch:  
+
+# Stop the current build if another one is started by a new push/pull request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-push-bot:
+    runs-on: ubuntu-latest
+    env:
+      platforms: 'linux/amd64'
+      registry: 'ghcr.io/${{ github.repository_owner }}'
+    steps:
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+          BUILD_TAGS=()
+          BUILD_TAGS+=("${TIMESTAMP}")
+          BUILD_TAGS+=("latest")
+          alias_tags=("${BUILD_TAGS[@]}")
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          platforms: ${{ env.platforms }}
+          context: ./
+          image: crisisbot
+          tags: | 
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          containerfiles: ./Dockerfile.bot
+          layers: false
+          oci: true
+
+      - name: Push to Container Registry
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          image: crisisbot
+          registry: ${{ env.registry }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+
+  build-push-auth:
+    runs-on: ubuntu-latest
+    env:
+      platforms: 'linux/amd64'
+      registry: 'ghcr.io/${{ github.repository_owner }}'
+    steps:
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+          BUILD_TAGS=()
+          BUILD_TAGS+=("${TIMESTAMP}")
+          BUILD_TAGS+=("latest")
+          alias_tags=("${BUILD_TAGS[@]}")
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          platforms: ${{ env.platforms }}
+          context: ./
+          image: bot-auth 
+          tags: | 
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          containerfiles: ./Dockerfile.auth-server
+          layers: false
+          oci: true
+
+      - name: Push to Container Registry
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          image: bot-auth
+          registry: ${{ env.registry }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+
+      # - name: Login to Container Registry
+      #   uses: redhat-actions/podman-login@v1
+      #   with:
+      #     registry: ${{ env.registry }}
+      #     username: ${{ secrets.BOT_USERNAME }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+
+      # - uses: sigstore/cosign-installer@v3.8.0
+
+      # - name: Sign container image
+      #   run: |
+      #     cosign sign -y --recursive --key env://SIGNING_SECRET ${{ env.registry }}/fedora-river-atomic@${{ steps.push.outputs.digest }}
+      #   env:
+      #     COSIGN_EXPERIMENTAL: false
+      #     SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}

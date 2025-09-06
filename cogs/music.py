@@ -1,7 +1,10 @@
-import asyncio
 import discord
-import yt_dlp as youtube_dl
 from discord.ext import commands
+import os
+import urllib.parse
+import requests
+import urllib.parse
+import spotify_controller
 
 
 def humanize_duration(seconds: int) -> str:
@@ -51,9 +54,6 @@ class Music(commands.Cog):
         - bot (commands.Bot): The bot instance to which the cog will be added.
         """
         self.bot = bot
-        self.song_queue = []
-        self.song_history = []
-        self.currently_playing = None
 
     # ======== Data Processing ========
 
@@ -64,6 +64,18 @@ class Music(commands.Cog):
         Parameters:
         - ctx (commands.Context): The context of the command invocation.
         """
+
+        if os.getenv("SPOTIFY_ACCESS_TOKEN") is None:
+            response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
+            if 300 > response.status_code >= 200:
+                os.environ["SPOTIFY_ACCESS_TOKEN"] = response.text
+            else: 
+                await ctx.reply("You are logged out.")
+                await self.login_command(ctx)
+
+        if spotify_controller.librespot is None:
+            spotify_controller.start_librespot()
+
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
                 await ctx.author.voice.channel.connect()
@@ -81,32 +93,15 @@ class Music(commands.Cog):
         - query (str): The song name or YouTube link to search for.
         """
         await self.join_voice_channel(ctx)
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "geo-bypass": True,
-            "rm-cache-dir": True,
-        }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch:{query}", download=False)
-            if (
-                info
-                and "entries" in info
-                and len(info["entries"]) > 0
-                and "url" in info["entries"][0]
-            ):
-                info = info["entries"][0]
-                print(f"Found media url: {info['url']}")
-            else:
-                print(
-                    f"Got an unexpected result from YouTube search. Query: {query}. Response: {info}"
-                )
-                await ctx.reply(f'No results found for "{query}"')
-                return
+        search_results = spotify_controller.search(f'"{query}"')
+        track_uri = search_results["tracks"]["items"][0]["uri"]
+        print("adding to queue", spotify_controller.add_to_queue(track_uri))
+        spotify_controller.switch_to_device()
+        if not spotify_controller.is_playing():
+            spotify_controller.play()
 
-        self.song_queue.append(info)
-
-        if self.currently_playing is not None:
-            await self.send_now_playing(ctx, info)
+        # if self.currently_playing is not None:
+        #     await self.send_now_playing(ctx, info)
 
     async def send_now_playing(self, ctx, info):
         """
@@ -135,47 +130,47 @@ class Music(commands.Cog):
         Parameters:
         - ctx (commands.Context): The context of the command invocation.
         """
+
         voice_client = ctx.guild.voice_client
-        if len(self.song_queue) == 0:
-            if voice_client is not None:
-                await ctx.reply(
-                    "There are no songs in the queue to play, disconnecting."
-                )
-                await voice_client.disconnect()
-            return
-        else:
-            info = self.song_queue.pop(0)
-            self.currently_playing = info
+        source = discord.FFmpegPCMAudio(
+            pipe=True, 
+            source=spotify_controller.librespot.stdout, 
+            before_options="-f s16le -ar 44100 -ac 2",
+            options="-f s16le -ar 48000 -ac 2",     
+        )
 
-            def after_playing(error):
-                """
-                Callback function executed after a song finishes playing.
-                Adds the current song to history, and plays the next song in the queue.
-
-                Parameters:
-                - error (Exception): An error that occurred during playback, if any.
-                """
-                if error:
-                    print(f"Error occurred: {error}")
-                self.song_history.append(self.currently_playing)
-                self.currently_playing = None
-                if len(self.song_queue) > 0:
-                    coro = self.play_next(ctx)
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-                    fut.result()
-
-                else:
-                    coro = voice_client.disconnect()
-                    fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-                    fut.result()
-
-            source = discord.FFmpegPCMAudio(
-                info["url"], options="-vn -af loudnorm=I=-14:TP=-2:LRA=11"
-            )
-            voice_client.play(source, after=after_playing)
-            await self.send_now_playing(ctx, info)
+        voice_client.play(source)
+        # await self.send_now_playing(ctx, info)
 
     # ======== Commands ========
+
+    @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
+    async def login_command(self, ctx): 
+        """
+        **Usage:** `.login`
+
+        **Example:** 
+        - `.login` -> responds with a link to login to spotify 
+
+        **Description:** 
+        Shares a link to login to a Spotify Premium account 
+        """
+        search_params = {
+            "scope": "streaming user-read-email user-read-private user-read-playback-state",
+            "response_type": "code",
+            "client_id": os.getenv("SPOTIFY_CLIENT_ID"),
+            "redirect_uri": f"{os.getenv('AUTH_SERVER')}/callback",
+            "state": os.getenv("AUTH_SERVER_SECURITY"),
+        }
+        query_string = urllib.parse.urlencode(search_params)
+        url = f"https://accounts.spotify.com/authorize/?{query_string}"
+
+        embed = discord.Embed(
+            title="Spotify Premium Login", url=url, color=discord.Color.blurple()
+        )
+
+        await ctx.send(embed=embed)
+        
 
     @commands.command(
         name="play", help="Adds a song to the queue and plays it if nothing is playing."
@@ -234,18 +229,8 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client is not None:
-            if voice_client.is_playing():
-                voice_client.pause()
-                await ctx.reply("Skipped the current song.")
-                self.song_history.append(self.currently_playing)
-
-                if len(self.song_queue) > 0:
-                    await self.play_next(ctx)
-                else:
-                    await ctx.reply(
-                        "There are no songs in the queue to play, disconnecting."
-                    )
-                    await voice_client.disconnect()
+            spotify_controller.skip("next")
+            await ctx.reply("Skipping to the next song")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -261,13 +246,8 @@ class Music(commands.Cog):
         """
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            if len(self.song_history) > 0:
-                voice_client.pause()
-                self.song_queue.insert(0, self.currently_playing)
-                self.song_queue.insert(0, self.song_history.pop())
-                await self.play_next(ctx)
-            else:
-                await ctx.reply("No history before this song.")
+            spotify_controller.skip("previous")
+            await ctx.reply("Returning to previous song")
         else:
             await ctx.reply("I am not playing any songs right now.")
 
@@ -279,12 +259,11 @@ class Music(commands.Cog):
         **Description:**
         Pauses the current song if it's playing. If no song is playing, informs the user.
         """
-        voice_client = ctx.guild.voice_client
-        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
-            voice_client.pause()
-            await ctx.reply("Pausing playback.")
+        if spotify_controller.is_playing():
+            spotify_controller.pause()
+            await ctx.reply("Pausing playback")
         else:
-            await ctx.reply("I am not playing any songs right now.")
+            await ctx.reply("Already paused. You may have meant to use `.resume`")
 
     @commands.command(
         name="resume", help="Resumes the playback of the current song if it's paused."
@@ -296,12 +275,11 @@ class Music(commands.Cog):
         **Description:**
         Resumes the playback of the current song if it's paused. If no song is paused, informs the user.
         """
-        voice_client = ctx.guild.voice_client
-        if voice_client and voice_client.is_paused():
-            voice_client.resume()
-            await ctx.reply("Resuming playback.")
+        if not spotify_controller.is_playing():
+            spotify_controller.play()
+            await ctx.reply("Resuming playback")
         else:
-            await ctx.reply("Not paused.")
+            await ctx.reply("Already playing. You may have meant to use `.pause`")
 
     @commands.command(name="rewind", help="Rewinds the current song to the start.")
     async def rewind_command(self, ctx):
