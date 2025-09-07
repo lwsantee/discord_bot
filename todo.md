@@ -10,3 +10,4 @@
 - [x] potentially move references to the name 'Discord Bot' into an env var to allow customizing the bot name
 - [x] break authentication server out into separate microservice
 - [ ] make errors relating to being logged out more obvious
+- [ ] get docker builds on arm64 working
