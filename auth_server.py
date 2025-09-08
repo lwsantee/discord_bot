@@ -30,6 +30,26 @@ def clean_old_token(wait: int = 3600) -> bool:
 
 @app.route("/callback", methods=["GET"])
 def callback():
+    """
+    Handles communication from Spotify's auth server that a user has requested to login to 
+    our client. Verifies that the user has a valid security token obtained from the client, 
+    then forwards the request to Spotify to get an access token 
+
+    # Required Query Args: 
+    * `code` - A login code provided to the user by Spotify indicating that they logged 
+               in successfully so far
+    * `state` - A token obtained from the spotify client that indicates this is a valid 
+                request, and not someone random hitting the server
+
+    # Returns 
+    If all goes well, will return a "Login Successful" plain text message 
+
+    # Errors 
+    * 500 - If the server does not have a security token set in the environment 
+    * 401 - If the `state` arg does not match the expected value
+    * 400 - If either `state` or `code` are missing, or if Spotify responds in an unexpected way
+    """
+
     code = request.args.get("code")
     state = request.args.get("state")
 
@@ -66,16 +86,35 @@ def callback():
 
 @app.route("/access-token/<state>", methods=["GET"])
 def access_token(state: str):
+    """
+    First verifies that the request is coming from a valid client by checking the `state` argument. 
+    Then responds with json containing {"access_token": "abcd", "refresh_token": "efgh"}
+
+    # Required Positional Args
+    * state - A token that indicates the request is coming from a valid client
+
+    # Returns 
+    If all goes well, responds with a json object containing the keys "access_token" and "refresh_token"
+
+    # Errors 
+    * 500 - If no security token has been set in the environment
+    * 401 - If `state` does not match the security token in the environment
+    * 404 - There is no spotify access token (likely indicating the user is logged out)
+    """
+
     if os.getenv("AUTH_SERVER_SECURITY") is None:
         return {"error": "Problem fetching state"}, 500
 
     if state != os.getenv("AUTH_SERVER_SECURITY"):
         return {"error": "Received bad state"}, 401
 
-    if os.getenv("SPOTIFY_ACCESS_TOKEN") is None:
+    if os.getenv("SPOTIFY_ACCESS_TOKEN") is None or os.getenv("SPOTIFY_ACCESS_TOKEN") == "":
         return {"error": "not found"}, 404
 
-    return os.getenv("SPOTIFY_ACCESS_TOKEN"), 200
+    return {
+        "access_token": os.getenv("SPOTIFY_ACCESS_TOKEN"), 
+        "refresh_token": os.getenv("SPOTIFY_REFRESH_TOKEN"),
+    }, 200
         
 
 if __name__ == "__main__":
