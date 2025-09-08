@@ -3,6 +3,7 @@
 - [ ] cache access token, so you can skip logging in everytime the bot starts
   - [ ] related: investigate refreshing the access token
 - [ ] get control functions (skip, pause, etc) working 
+- [x] make bot leave if alone in the channel for some time
 
 # Fixes 
 
@@ -10,4 +11,4 @@
 - [x] potentially move references to the name 'Discord Bot' into an env var to allow customizing the bot name
 - [x] break authentication server out into separate microservice
 - [ ] make errors relating to being logged out more obvious
-- [ ] get docker builds on arm64 working
+- [x] get docker builds on arm64 working
