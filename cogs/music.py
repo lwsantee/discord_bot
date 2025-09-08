@@ -1,3 +1,4 @@
+import json
 import discord
 from discord.ext import commands
 import os
@@ -5,6 +6,7 @@ import urllib.parse
 import requests
 import urllib.parse
 import spotify_controller
+import time
 
 
 def humanize_duration(seconds: int) -> str:
@@ -65,16 +67,39 @@ class Music(commands.Cog):
         - ctx (commands.Context): The context of the command invocation.
         """
 
-        if os.getenv("SPOTIFY_ACCESS_TOKEN") is None:
+        # We have an access token, but it has expired, so refresh it
+        if os.getenv("SPOTIFY_ACCESS_TOKEN") not in ("", None) and not spotify_controller.is_valid_token(os.getenv("SPOTIFY_ACCESS_TOKEN")):
+            # There is no refresh token either, so the user must relog
+            if os.getenv("SPOTIFY_REFRESH_TOKEN") in (None, ""):
+                print(f"No valid access token or refresh token found")
+                await ctx.reply("You are logged out. Try running `.login`")
+                return 
+
+            spotify_controller.refresh_token(os.getenv("SPOTIFY_REFRESH_TOKEN"))
+
+        # If there is no access token, or the existing one is invalid, attempt to fetch a new one from the server
+        elif os.getenv("SPOTIFY_ACCESS_TOKEN") in (None, "") or not spotify_controller.is_valid_token(os.getenv("SPOTIFY_ACCESS_TOKEN")):
             response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
             if 300 > response.status_code >= 200:
-                os.environ["SPOTIFY_ACCESS_TOKEN"] = response.text
+                body = json.loads(response.text)
+                os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
+                os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
             else: 
-                await ctx.reply("You are logged out.")
+                await ctx.reply("You are logged out. Try running `.login`")
                 await self.login_command(ctx)
 
         if spotify_controller.librespot is None:
             spotify_controller.start_librespot()
+            wait_max = 5  # seconds
+            wait = 0
+            while spotify_controller.get_bot_device_id() is None and wait < wait_max:
+                time.sleep(0.02)
+                wait += 0.02
+
+            if spotify_controller.get_bot_device_id() is None: 
+                print("Timeout attempting to start librespot.")
+                await ctx.reply("Timeout attempting to start librespot. You may need to log in first: `.login`")
+                return
 
         if ctx.author.voice and ctx.author.voice.channel:
             if ctx.guild.voice_client is None:
