@@ -3,8 +3,29 @@ import os
 import base64
 import requests
 import json
+import threading
+import time
 
 app = Flask(__name__)
+
+
+def clean_old_token(wait: int = 3600) -> bool:
+    """
+    Delete outdated access token after `wait` seconds. `wait` is usually defined by the 
+    `expires_in` key in the authorization response from Spotify. By default, this is set 
+    to one hour or 3600 seconds 
+
+    :param wait: The number of seconds to wait before deleting an outdated key 
+    :returns: `True` if the old token was successfully removed. `False` otherwise
+    """
+
+    time.sleep(wait)
+    try: 
+        del os.environ["SPOTIFY_ACCESS_TOKEN"]
+        return True
+    except KeyError:
+        print("clean_old_token: SPOTIFY_ACCESS_TOKEN is already null")
+        return False
 
 
 @app.route("/callback", methods=["GET"])
@@ -36,6 +57,8 @@ def callback():
         print(body)
         os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
         os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
+        clean_thread = threading.Thread(target=clean_old_token, args=(body["expires_in"],))
+        clean_thread.start()
         return "Login Successful", 200
     else:
         return response.text, 400
