@@ -90,7 +90,7 @@ class Music(commands.Cog):
 
         if spotify_controller.librespot is None:
             spotify_controller.start_librespot()
-            wait_max = 5  # seconds
+            wait_max = 10  # seconds
             wait = 0
             period = 1
             while spotify_controller.get_bot_device_id() is None and wait < wait_max:
