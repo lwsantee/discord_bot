@@ -250,18 +250,16 @@ class Music(commands.Cog):
         **Description:**
         Stops the current song and clears the song queue. Disconnects the bot from the voice channel if no song is playing.
         """
+
         voice_client = ctx.guild.voice_client
-        if voice_client is not None:
+        if voice_client:
             if voice_client.is_playing():
                 voice_client.stop()
                 await voice_client.disconnect()
-                self.song_queue.clear()
-                await ctx.reply("Stopped playing the current song, disconnecting.")
                 return
             else:
                 await voice_client.disconnect()
-                self.song_queue.clear()
-                self.song_history.clear()
+            await ctx.reply("Disconnecting.")
         await ctx.reply("I am not playing any songs right now.")
 
     @commands.command(
