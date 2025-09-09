@@ -90,11 +90,12 @@ class Music(commands.Cog):
 
         if spotify_controller.librespot is None:
             spotify_controller.start_librespot()
-            wait_max = 5  # seconds
+            wait_max = 10  # seconds
             wait = 0
+            period = 1
             while spotify_controller.get_bot_device_id() is None and wait < wait_max:
-                time.sleep(0.02)
-                wait += 0.02
+                time.sleep(period)
+                wait += period
 
             if spotify_controller.get_bot_device_id() is None: 
                 print("Timeout attempting to start librespot.")
