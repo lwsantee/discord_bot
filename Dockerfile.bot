@@ -1,11 +1,29 @@
-FROM python:3.11-slim 
+FROM giof71/librespot:latest as librespot
+
+FROM python:3.13-slim 
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        libssl-dev \
+        pkg-config \
+        curl \
+        build-essential \
+        libasound2-dev && \
     rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf -Lo rustup.sh https://sh.rustup.rs && \
+    bash rustup.sh -y
+
+ENV PATH="$PATH:/root/.cargo/bin"
+RUN cargo install librespot
 
 COPY . /bot 
 WORKDIR /bot 
 RUN pip install -r requirements.txt
+
+# Cleanup 
+RUN apt-get remove -y curl build-essential && \
+    rm -rf /rustup.sh 
 
 CMD ["python", "bot.py"]

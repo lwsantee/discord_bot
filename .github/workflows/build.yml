@@ -36,7 +36,7 @@ jobs:
   build-push-bot:
     runs-on: ubuntu-latest
     env:
-      platforms: 'linux/amd64'
+      platforms: 'linux/arm64,linux/amd64'
       registry: 'ghcr.io/${{ github.repository_owner }}'
     steps:
       - name: Generate tags
@@ -57,6 +57,11 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install qemu dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
 
       - name: Build container image
         uses: redhat-actions/buildah-build@v2

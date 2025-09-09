@@ -1,3 +1,4 @@
+from typing import Dict
 import urllib.parse
 import requests
 import json
@@ -8,6 +9,33 @@ import subprocess
 device_id = None
 librespot = None
 SPOTIFY_API_PREFIX="https://api.spotify.com/v1"
+
+
+def is_valid_token(token: str) -> bool:
+    response = requests.get(f"{SPOTIFY_API_PREFIX}/tracks/2TpxZ7JUBn3uw46aR7qd6V", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    if 300 > response.status_code >= 200:
+        return True 
+    elif response.status_code == 401:
+        return False
+    raise ValueError(f"is_valid_token received unexpected response from Spotify: code {response.status_code} and text {response.text}")
+
+
+def refresh_token(refresh_token: str) -> Dict[str, str]: 
+    body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
+    response = requests.post(f"https://accounts.spotify.com/api/token", headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+    }, data=body)
+    
+    if 300 > response.status_code >= 200:
+        body = json.loads(response.text)
+        os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
+        os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
+        return {"access_token": body["access_token"], "refresh_token": body["refresh_token"]}
+    
+    print(f"refresh_token failed with code {response.status_code} and text {response.text}")
+    return {}
 
 
 def get_spotify_headers(): 
@@ -81,7 +109,7 @@ def get_bot_device_id():
         return device_id
 
     response = requests.get(f"{SPOTIFY_API_PREFIX}/me/player/devices", headers=get_spotify_headers())
-    if response.status_code == 200:
+    if 300 > response.status_code >= 200:
         body = json.loads(response.text)
         for device in body["devices"]: 
             if device["name"] == os.getenv("BOT_NAME"): 
@@ -91,6 +119,8 @@ def get_bot_device_id():
         print("get_bot_device_id failed to find a device")
     else:
         print(f"get_bot_device_id failed with response {response.status_code} and text {response.text}")
+
+    return None
 
 
 def switch_to_device():
