@@ -84,7 +84,7 @@ def callback():
         return response.text, 400
 
 
-@app.route("/access-token/<state>", methods=["GET"])
+@app.route("/access-token/<state>", methods=["GET", "DELETE"])
 def access_token(state: str):
     """
     First verifies that the request is coming from a valid client by checking the `state` argument. 
@@ -101,20 +101,32 @@ def access_token(state: str):
     * 401 - If `state` does not match the security token in the environment
     * 404 - There is no spotify access token (likely indicating the user is logged out)
     """
-
     if os.getenv("AUTH_SERVER_SECURITY") is None:
         return {"error": "Problem fetching state"}, 500
 
     if state != os.getenv("AUTH_SERVER_SECURITY"):
         return {"error": "Received bad state"}, 401
 
-    if os.getenv("SPOTIFY_ACCESS_TOKEN") is None or os.getenv("SPOTIFY_ACCESS_TOKEN") == "":
-        return {"error": "not found"}, 404
+    if request.method == "GET":
+        if os.getenv("SPOTIFY_ACCESS_TOKEN") is None or os.getenv("SPOTIFY_ACCESS_TOKEN") == "":
+            return {"error": "not found"}, 404
 
-    return {
-        "access_token": os.getenv("SPOTIFY_ACCESS_TOKEN"), 
-        "refresh_token": os.getenv("SPOTIFY_REFRESH_TOKEN"),
-    }, 200
+        return {
+            "access_token": os.getenv("SPOTIFY_ACCESS_TOKEN"), 
+            "refresh_token": os.getenv("SPOTIFY_REFRESH_TOKEN"),
+        }, 200
+    
+    elif request.method == "DELETE": 
+        status = 204
+        if os.getenv("SPOTIFY_ACCESS_TOKEN") is not None:
+            del os.environ["SPOTIFY_ACCESS_TOKEN"]
+        else: 
+            status = 404
+
+        if os.getenv("SPOTIFY_REFRESH_TOKEN") is not None:
+            del os.environ["SPOTIFY_REFRESH_TOKEN"]
+
+        return status
         
 
 if __name__ == "__main__":

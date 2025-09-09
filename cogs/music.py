@@ -170,6 +170,27 @@ class Music(commands.Cog):
 
     # ======== Commands ========
 
+    @commands.command(name="logout", help="Logout of the Current Account.")
+    async def logout_command(self, ctx): 
+        """
+        **Usage:** `.logout`
+
+        **Example:** 
+        - `.logout` -> Removes all access tokens and requires a relog 
+
+        **Description:**
+        Removes all access tokens and requires a relog 
+        """
+        success = spotify_controller.logout()
+        if success:
+            await ctx.reply("Successfully logged out.")
+        else:
+            await ctx.reply("Looks like you're already logged out.")
+
+        if ctx.guild.voice_client and ctx.guild.voice_client.is_connected():
+            await ctx.guild.voice_client.disconnect()
+
+
     @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
     async def login_command(self, ctx): 
         """

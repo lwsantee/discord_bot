@@ -22,6 +22,31 @@ def is_valid_token(token: str) -> bool:
     raise ValueError(f"is_valid_token received unexpected response from Spotify: code {response.status_code} and text {response.text}")
 
 
+def logout() -> bool: 
+    """
+    "Logs out" the user by removing all references to access tokens or refresh tokens both locally 
+    as well as on the auth server
+
+    :returns: `True` if the user was logged out on the auth server. `False` if the user 
+    was not logged out on the auth server. This is probably because the user is already 
+    logged out
+    """
+
+    if os.getenv("SPOTIFY_ACCESS_TOKEN"):
+        del os.environ["SPOTIFY_ACCESS_TOKEN"] 
+
+    if os.getenv("SPOTIFY_REFRESH_TOKEN"):
+        del os.environ["SPOTIFY_REFRESH_TOKEN"]
+
+    response = requests.delete(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
+    if 300 > response.status_code >= 200:
+        print("Successfully logged out")
+        return True 
+
+    print("Attempted logout failed with 404. User is likely already logged out")
+    return False 
+
+
 def refresh_token(refresh_token: str) -> Dict[str, str]: 
     body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
     response = requests.post(f"https://accounts.spotify.com/api/token", headers={
