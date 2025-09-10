@@ -170,6 +170,27 @@ class Music(commands.Cog):
 
     # ======== Commands ========
 
+    @commands.command(name="logout", help="Logout of the Current Account.")
+    async def logout_command(self, ctx): 
+        """
+        **Usage:** `.logout`
+
+        **Example:** 
+        - `.logout` -> Removes all access tokens and requires a relog 
+
+        **Description:**
+        Removes all access tokens and requires a relog 
+        """
+        success = spotify_controller.logout()
+        if success:
+            await ctx.reply("Successfully logged out.")
+        else:
+            await ctx.reply("Looks like you're already logged out.")
+
+        if ctx.guild.voice_client and ctx.guild.voice_client.is_connected():
+            await ctx.guild.voice_client.disconnect()
+
+
     @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
     async def login_command(self, ctx): 
         """
@@ -229,18 +250,16 @@ class Music(commands.Cog):
         **Description:**
         Stops the current song and clears the song queue. Disconnects the bot from the voice channel if no song is playing.
         """
+
         voice_client = ctx.guild.voice_client
-        if voice_client is not None:
+        if voice_client:
             if voice_client.is_playing():
                 voice_client.stop()
                 await voice_client.disconnect()
-                self.song_queue.clear()
-                await ctx.reply("Stopped playing the current song, disconnecting.")
                 return
             else:
                 await voice_client.disconnect()
-                self.song_queue.clear()
-                self.song_history.clear()
+            await ctx.reply("Disconnecting.")
         await ctx.reply("I am not playing any songs right now.")
 
     @commands.command(
