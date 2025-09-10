@@ -47,26 +47,27 @@ def logout() -> bool:
     return False 
 
 
-def refresh_token(refresh_token: str) -> Dict[str, str]: 
-    body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
-    response = requests.post(f"https://accounts.spotify.com/api/token", headers={
-        "Content-Type": "application/x-www-form-urlencoded",
-    }, data=body)
-    
+def refresh_token(refresh_token: str) -> Dict[str, str] | None: 
+    response = requests.post(f"{os.getenv('AUTH_SERVER')}/refresh-token/{os.getenv('AUTH_SERVER_SECURITY')}/{refresh_token}")
     if 300 > response.status_code >= 200:
         body = json.loads(response.text)
-        os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
-        os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
-        return {"access_token": body["access_token"], "refresh_token": body["refresh_token"]}
-    
+        return body
+
     print(f"refresh_token failed with code {response.status_code} and text {response.text}")
-    return {}
+    return None
 
 
 def get_spotify_headers(): 
     return {
-        "Authorization": f"Bearer {os.getenv('SPOTIFY_ACCESS_TOKEN')}",
+        "Authorization": f"Bearer {get_access_token()['access_token']}",
     }
+
+
+def get_access_token() -> Dict[str, str] | None:
+    response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
+    if 300 > response.status_code >= 200:
+        return json.loads(response.text)
+    return refresh_token(os.getenv("SPOTIFY_REFRESH_TOKEN"))
 
 
 def is_playing():
@@ -188,7 +189,7 @@ def start_librespot():
         "--name", os.getenv("BOT_NAME"),
         "--backend", "pipe",
         "--bitrate", "320",
-        "--access-token", os.getenv("SPOTIFY_ACCESS_TOKEN"),
+        "--access-token", get_access_token()["access_token"],
         "--enable-volume-normalisation",
         "--initial-volume", "100",
     ], stdout=subprocess.PIPE)
