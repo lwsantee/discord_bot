@@ -126,11 +126,20 @@ def access_token(state: str):
         if os.getenv("SPOTIFY_REFRESH_TOKEN") is not None:
             del os.environ["SPOTIFY_REFRESH_TOKEN"]
 
-        return status
+        return {"status": status}, status
 
 
-@app.route("/refresh-token/<state>/<refresh-token>", methods=["POST"])
-def refresh_token(state: str, refresh_token: str): 
+@app.route("/refresh-token", methods=["POST"])
+def refresh_token(): 
+    if not request.args.get("state"):
+        return {"error": "Missing state argument"}, 400
+
+    if not request.args.get("refresh_token"):
+        return {"error": "Missing refresh_token argument"}, 400
+
+    state = request.args.get("state")
+    refresh_token = request.args.get("refresh_token")
+
     if os.getenv("AUTH_SERVER_SECURITY") is None:
         return {"error": "Problem fetching state"}, 500
 

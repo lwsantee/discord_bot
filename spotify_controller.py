@@ -47,7 +47,7 @@ def logout() -> bool:
 
 
 def refresh_token(refresh_token: str) -> Dict[str, str] | None: 
-    response = requests.post(f"{os.getenv('AUTH_SERVER')}/refresh-token/{os.getenv('AUTH_SERVER_SECURITY')}/{refresh_token}")
+    response = requests.post(f"{os.getenv('AUTH_SERVER')}/refresh-token?state={os.getenv('AUTH_SERVER_SECURITY')}&refresh_token={refresh_token}")
     if 300 > response.status_code >= 200:
         body = json.loads(response.text)
         return body
