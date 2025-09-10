@@ -127,6 +127,29 @@ def access_token(state: str):
             del os.environ["SPOTIFY_REFRESH_TOKEN"]
 
         return status
+
+
+@app.route("/refresh-token/<state>/<refresh-token>", methods=["POST"])
+def refresh_token(state: str, refresh_token: str): 
+    if os.getenv("AUTH_SERVER_SECURITY") is None:
+        return {"error": "Problem fetching state"}, 500
+
+    if state != os.getenv("AUTH_SERVER_SECURITY"):
+        return {"error": "Received bad state"}, 401
+
+    body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
+    response = requests.post(f"https://accounts.spotify.com/api/token", headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+    }, data=body)
+    
+    if 300 > response.status_code >= 200:
+        body = json.loads(response.text)
+        os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
+        os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
+        return {"access_token": body["access_token"], "refresh_token": body["refresh_token"]}, 200
+    
+    print(f"refresh_token failed with code {response.status_code} and text {response.text}")
+    return {}
         
 
 if __name__ == "__main__":
