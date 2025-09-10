@@ -6,7 +6,6 @@ import os
 import subprocess
 
 
-device_id = None
 librespot = None
 SPOTIFY_API_PREFIX="https://api.spotify.com/v1"
 
@@ -129,11 +128,6 @@ def add_to_queue(uri: str):
 
 
 def get_bot_device_id(): 
-    # We only need to query the API once to get the bot's device id. Every other time, just return the saved value
-    global device_id
-    if device_id is not None:
-        return device_id
-
     response = requests.get(f"{SPOTIFY_API_PREFIX}/me/player/devices", headers=get_spotify_headers())
     if 300 > response.status_code >= 200:
         body = json.loads(response.text)
@@ -150,19 +144,20 @@ def get_bot_device_id():
 
 
 def switch_to_device():
+    bot_device_id = get_bot_device_id()
     headers = get_spotify_headers()
     response = requests.get(f"{SPOTIFY_API_PREFIX}/me/player/devices", headers=headers)
     if 300 > response.status_code >= 200:
         body = json.loads(response.text)
         for device in body["devices"]:
-            if device["is_active"] and device["id"] == get_bot_device_id():
+            if device["is_active"] and device["id"] == bot_device_id:
                 print("Bot is already the active device")
                 return
 
     headers["Content-Type"] = "application/json"
     response = requests.put(f"{SPOTIFY_API_PREFIX}/me/player", headers=headers, json={
         "device_ids": [
-            get_bot_device_id()
+            bot_device_id,
         ],
         "play": True
     })
