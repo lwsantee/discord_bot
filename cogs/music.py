@@ -67,26 +67,17 @@ class Music(commands.Cog):
         - ctx (commands.Context): The context of the command invocation.
         """
 
+        tokens = spotify_controller.get_access_token() 
+
         # We have an access token, but it has expired, so refresh it
-        if os.getenv("SPOTIFY_ACCESS_TOKEN") not in ("", None) and not spotify_controller.is_valid_token(os.getenv("SPOTIFY_ACCESS_TOKEN")):
+        if tokens and "access_token" in tokens and tokens["access_token"] not in ("", None) and not spotify_controller.is_valid_token(tokens["access_token"]):
             # There is no refresh token either, so the user must relog
-            if os.getenv("SPOTIFY_REFRESH_TOKEN") in (None, ""):
+            if tokens["refresh_token"] in (None, ""):
                 print(f"No valid access token or refresh token found")
                 await ctx.reply("You are logged out. Try running `.login`")
                 return 
 
-            spotify_controller.refresh_token(os.getenv("SPOTIFY_REFRESH_TOKEN"))
-
-        # If there is no access token, or the existing one is invalid, attempt to fetch a new one from the server
-        elif os.getenv("SPOTIFY_ACCESS_TOKEN") in (None, "") or not spotify_controller.is_valid_token(os.getenv("SPOTIFY_ACCESS_TOKEN")):
-            response = requests.get(f"{os.getenv('AUTH_SERVER')}/access-token/{os.getenv('AUTH_SERVER_SECURITY')}")
-            if 300 > response.status_code >= 200:
-                body = json.loads(response.text)
-                os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
-                os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
-            else: 
-                await ctx.reply("You are logged out. Try running `.login`")
-                await self.login_command(ctx)
+            spotify_controller.refresh_token(tokens["refresh_token"])
 
         if spotify_controller.librespot is None:
             spotify_controller.start_librespot()
