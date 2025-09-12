@@ -12,3 +12,4 @@
 - [x] break authentication server out into separate microservice
 - [ ] make errors relating to being logged out more obvious
 - [x] get docker builds on arm64 working
+- [ ] pause keeps streaming, then dumps all data rapidly when unpaused
