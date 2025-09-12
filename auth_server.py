@@ -108,9 +108,6 @@ def access_token(state: str):
         return {"error": "Received bad state"}, 401
 
     if request.method == "GET":
-        if os.getenv("SPOTIFY_ACCESS_TOKEN") is None or os.getenv("SPOTIFY_ACCESS_TOKEN") == "":
-            return {"error": "not found"}, 404
-
         return {
             "access_token": os.getenv("SPOTIFY_ACCESS_TOKEN"), 
             "refresh_token": os.getenv("SPOTIFY_REFRESH_TOKEN"),
