@@ -181,6 +181,8 @@ class Music(commands.Cog):
         if ctx.guild.voice_client and ctx.guild.voice_client.is_connected():
             await ctx.guild.voice_client.disconnect()
 
+        spotify_controller.stop_librespot()
+
 
     @commands.command(name="login", help="Login to a Spotify Premium account to play music.")
     async def login_command(self, ctx): 
@@ -251,6 +253,8 @@ class Music(commands.Cog):
             else:
                 await voice_client.disconnect()
             await ctx.reply("Disconnecting.")
+            spotify_controller.stop_librespot()
+
         await ctx.reply("I am not playing any songs right now.")
 
     @commands.command(
