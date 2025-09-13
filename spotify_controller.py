@@ -4,6 +4,8 @@ import requests
 import json
 import os
 import subprocess
+import threading
+import time
 
 
 librespot = None
@@ -134,7 +136,6 @@ def get_bot_device_id():
         for device in body["devices"]: 
             if device["name"] == os.getenv("BOT_NAME"): 
                 print(f"found device {device['id']}")
-                device_id = device["id"]
                 return device["id"]
         print("get_bot_device_id failed to find a device")
     else:
@@ -179,6 +180,7 @@ def set_volume_percent(percent: int):
 
 def start_librespot():
     global librespot 
+    print(get_access_token())
     librespot = subprocess.Popen([
         "librespot",
         "--name", os.getenv("BOT_NAME"),
@@ -189,3 +191,20 @@ def start_librespot():
         "--initial-volume", "100",
     ], stdout=subprocess.PIPE)
 
+
+def stop_librespot():
+    global librespot 
+    if librespot:
+        librespot.terminate()
+        librespot = None
+
+
+def _refresh_librespot():
+    global librespot 
+    print(f"starting refresh thread: Librespot is '{librespot}'")
+    if librespot:
+        print("Waiting to refresh librespot in 1 hour")
+        time.sleep(3590)
+        print("Refreshing librespot")
+        stop_librespot()
+        start_librespot()

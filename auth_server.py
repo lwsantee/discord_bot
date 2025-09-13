@@ -9,23 +9,50 @@ import time
 app = Flask(__name__)
 
 
-def clean_old_token(wait: int = 3600) -> bool:
+def refresh_token_helper(refresh_token: str):
     """
-    Delete outdated access token after `wait` seconds. `wait` is usually defined by the 
-    `expires_in` key in the authorization response from Spotify. By default, this is set 
-    to one hour or 3600 seconds 
+    Performs the actual task of refreshing an expired access token as required in `clean_old_token` 
+    and calls to the `refresh-token` endpoint. 
 
-    :param wait: The number of seconds to wait before deleting an outdated key 
-    :returns: `True` if the old token was successfully removed. `False` otherwise
+    :param refresh_token: The refresh_token to send to Spotify in order to get a new access token 
+    """
+
+    body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
+    encoded_auth = base64.b64encode(bytes(f"{os.getenv('SPOTIFY_CLIENT_ID')}:{os.getenv('SPOTIFY_CLIENT_SECRET')}", "utf-8"))
+    headers = {
+        "Authorization": f"Basic {encoded_auth.decode('utf-8')}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    response = requests.post(f"https://accounts.spotify.com/api/token", headers=headers, data=body)
+    
+    if 300 > response.status_code >= 200:
+        body = json.loads(response.text)
+        os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
+        return {"access_token": body["access_token"]}, 200
+    
+    print(f"refresh_token failed with code {response.status_code} and text {response.text}")
+    return {}
+
+
+def clean_old_token(wait: int = 3590) -> bool:
+    """
+    Attempts to replace outdated access token after `wait` seconds. `wait` is usually defined by the 
+    `expires_in` key in the authorization response from Spotify. By default, this is set 
+    to just under 1 hour
+
+    :param wait: The number of seconds to wait before replacing an outdated key
+    :returns: `True` if the old token was successfully replaced. `False` otherwise
     """
 
     time.sleep(wait)
-    try: 
-        del os.environ["SPOTIFY_ACCESS_TOKEN"]
-        return True
-    except KeyError:
-        print("clean_old_token: SPOTIFY_ACCESS_TOKEN is already null")
+    if os.getenv("SPOTIFY_REFRESH_TOKEN") is None:
         return False
+
+    response = refresh_token_helper(os.getenv("SPOTIFY_REFRESH_TOKEN"))
+    if len(response) > 1 and 300 > response[1] >= 200:
+        return True
+
+    return False
 
 
 @app.route("/callback", methods=["GET"])
@@ -77,7 +104,7 @@ def callback():
         print(body)
         os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
         os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
-        clean_thread = threading.Thread(target=clean_old_token, args=(body["expires_in"],))
+        clean_thread = threading.Thread(target=clean_old_token, args=(body["expires_in"] - 10,))
         clean_thread.start()
         return "Login Successful", 200
     else:
@@ -143,19 +170,7 @@ def refresh_token():
     if state != os.getenv("AUTH_SERVER_SECURITY"):
         return {"error": "Received bad state"}, 401
 
-    body = f"grant_type=refresh_token&client_id={os.getenv('SPOTIFY_CLIENT_ID')}&refresh_token={refresh_token}"
-    response = requests.post(f"https://accounts.spotify.com/api/token", headers={
-        "Content-Type": "application/x-www-form-urlencoded",
-    }, data=body)
-    
-    if 300 > response.status_code >= 200:
-        body = json.loads(response.text)
-        os.environ["SPOTIFY_REFRESH_TOKEN"] = body["refresh_token"]
-        os.environ["SPOTIFY_ACCESS_TOKEN"] = body["access_token"]
-        return {"access_token": body["access_token"], "refresh_token": body["refresh_token"]}, 200
-    
-    print(f"refresh_token failed with code {response.status_code} and text {response.text}")
-    return {}
+    return refresh_token_helper(refresh_token)
         
 
 if __name__ == "__main__":
