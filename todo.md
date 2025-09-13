@@ -4,6 +4,8 @@
   - [ ] related: investigate refreshing the access token
 - [ ] get control functions (skip, pause, etc) working 
 - [x] make bot leave if alone in the channel for some time
+- [ ] logout
+- [ ] search through things other than tracks
 
 # Fixes 
 
@@ -13,3 +15,4 @@
 - [ ] make errors relating to being logged out more obvious
 - [x] get docker builds on arm64 working
 - [ ] pause keeps streaming, then dumps all data rapidly when unpaused
+- [ ] maybe refetch auth token from server every time needed
