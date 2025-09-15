@@ -1,9 +1,11 @@
 # Features 
 
-- [ ] cache access token, so you can skip logging in everytime the bot starts
-  - [ ] related: investigate refreshing the access token
+- [x] cache access token, so you can skip logging in everytime the bot starts
+  - [x] related: investigate refreshing the access token
 - [ ] get control functions (skip, pause, etc) working 
 - [x] make bot leave if alone in the channel for some time
+- [ ] logout
+- [ ] search through things other than tracks
 
 # Fixes 
 
@@ -12,3 +14,5 @@
 - [x] break authentication server out into separate microservice
 - [ ] make errors relating to being logged out more obvious
 - [x] get docker builds on arm64 working
+- [ ] pause keeps streaming, then dumps all data rapidly when unpaused
+- [ ] maybe refetch auth token any time a command is called
