@@ -299,6 +299,10 @@ class Music(commands.Cog):
         **Description:**
         Pauses the current song if it's playing. If no song is playing, informs the user.
         """
+        voice_client = ctx.guild.voice_client
+        if voice_client and voice_client.is_playing() and not voice_client.is_paused():
+            voice_client.pause()
+
         if spotify_controller.is_playing():
             spotify_controller.pause()
             await ctx.reply("Pausing playback")
@@ -316,6 +320,10 @@ class Music(commands.Cog):
         Resumes the playback of the current song if it's paused. If no song is paused, informs the user.
         """
         if not spotify_controller.is_playing():
+            voice_client = ctx.guild.voice_client
+            if voice_client and voice_client.is_paused(): 
+                voice_client.resume()
+
             spotify_controller.play()
             await ctx.reply("Resuming playback")
         else:
