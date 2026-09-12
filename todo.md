@@ -6,12 +6,14 @@
 - [x] make bot leave if alone in the channel for some time
 - [x] logout
 - [x] search through things other than tracks
-  - [ ] have the option to display multiple results to user 
+  - [x] have the option to display multiple results to user 
   - [x] or just pick the first closest match
 - [ ] killswitch
-- [ ] playback gui
-    - [ ] clear queue 
+- [x] playback gui
+    - [x] clear queue 
         - no endpoint, so maybe just try skipping everything in the queue until empty
+- [ ] get a hook into spotify to update the gui more frequently
+- [x] add line numbers to the displayed queue instead of the bullet point
 
 # Fixes 
 
@@ -24,3 +26,7 @@
   - [ ] still kind of happens if paused through spotify interface
 - [x] maybe refetch auth token any time a command is called
   - Marked as complete. No longer necessary
+- [x] display a message that a song has been queued. 
+- [x] Possibly show the last ~4 items in the queue as well as first 4
+- [ ] get dot-commands working for controlling music again
+- [ ] periodically update python dependencies 

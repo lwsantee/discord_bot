@@ -15,7 +15,7 @@ class SearchModal(discord.ui.Modal, title="Song Search"):
         self.ctx = ctx
         self.add_item(discord.ui.TextInput(label="Query", custom_id="query"))
         self.add_item(discord.ui.TextInput(label="Auto queue best match", default="Yes", custom_id="auto_queue", required=False))
-        self.add_item(discord.ui.TextInput(label="Include results from", default="album,playlist,track,episode", custom_id="type", required=False))
+        self.add_item(discord.ui.TextInput(label="Result Category", default="track,episode", custom_id="type", required=False))
 
     @staticmethod
     def parse_toggler(raw_toggler_input: str) -> bool:
@@ -121,12 +121,14 @@ class SearchModal(discord.ui.Modal, title="Song Search"):
                     except Exception as e:
                         await self.ctx.send(f"Encountered error while queueing your collection: ```{e}```")
                         return 
+                await self.ctx.send(f"Queued \"{best_match.name}\" by {best_match.artists[0].name}")
             elif isinstance(best_match, spotify_controller.Queueable):
                 try:
                     spotify_controller.add_to_queue(best_match.uri)
                 except spotify_controller.ControllerError as e: 
                     await self.ctx.send(f"Encountered error while queueing your track: ```{e}```")
                     return 
+                await self.ctx.send(f"Queued \"{best_match.name}\" by {best_match.artists[0].name}")
             else:
                 await self.ctx.send("Doesn't look like there were any valid search results for that")
                 return
@@ -153,7 +155,11 @@ class PlaybackView(discord.ui.View):
         super().__init__(timeout=None)
         self.ctx = ctx 
         self.add_item(SkipBackButton(ctx))
-        self.add_item(TogglePlayButton(ctx, ctx.guild.voice_client.is_playing()))
+        is_playing = False
+        if ctx.guild.voice_client:
+            is_playing = ctx.guild.voice_client.is_playing()
+
+        self.add_item(TogglePlayButton(ctx, is_playing))
         self.add_item(SkipForwardButton(ctx))
         self.add_item(StopButton(ctx))
         self.add_item(SearchButton(ctx))
@@ -172,7 +178,14 @@ async def create_playback_embed(ctx) -> tuple[discord.Embed, PlaybackView]:
 
     now_playing = spotify_controller.get_now_playing()
     queue = spotify_controller.get_queue()
-    queue_str = "\n".join([f"- {track.discord_display_str()}" for track in queue[:4]])
+    queue_str = ""
+    if len(queue) <= 8:
+        queue_str += "\n".join([f"{i + 1}. {track.discord_display_str()}" for i, track in enumerate(queue[:6])])
+    else: 
+        queue_str += "\n".join([f"{i + 1}. {track.discord_display_str()}" for i, track in enumerate(queue[:3])])
+        queue_str += "\n...\n"
+        queue_str += "\n".join([f"{len(queue) - 2 + i}. {track.discord_display_str()}" for i, track in enumerate(queue[-3:])])
+    queue_str = queue_str[:1024]
 
     view = PlaybackView(ctx)
     embed = discord.Embed(title="Playback", color=discord.Color.blurple())
@@ -287,7 +300,7 @@ class SearchResultView(discord.ui.View):
 
 class SearchResultButton(discord.ui.Button):
     def __init__(self, ctx, resource: spotify_controller.Queueable | spotify_controller.Collection):
-        super().__init__(label=resource.name[:80], style=discord.ButtonStyle.primary)
+        super().__init__(label=f"{resource.artists[0].name} - {resource.name}"[:80], style=discord.ButtonStyle.primary)
         self.resource = resource
         self.ctx = ctx
 
@@ -301,6 +314,7 @@ class SearchResultButton(discord.ui.Button):
                 except Exception as e:
                     await self.ctx.send(f"Encountered error while queueing your collection: ```{e}```")
                     return 
+            await self.ctx.send(f"Queued \"{self.resource.name}\" by {self.resource.artists[0].name}")
         elif isinstance(self.resource, spotify_controller.Queueable):
             await interaction.response.defer()
             try:
@@ -308,6 +322,7 @@ class SearchResultButton(discord.ui.Button):
             except spotify_controller.ControllerError as e: 
                 await self.ctx.send(f"Encountered error while queueing your track: ```{e}```")
                 return 
+            await self.ctx.send(f"Queued \"{self.resource.name}\" by {self.resource.artists[0].name}")
         else:
             await self.ctx.send("Doesn't look like there were any valid search results for that")
             return
@@ -437,6 +452,10 @@ class Music(commands.Cog):
             spotify_controller.play()
             
         voice_client = ctx.guild.voice_client 
+        if not voice_client:
+            await ctx.send("Failed to connect to voice channel.")
+            return
+
         if voice_client and not voice_client.is_playing():
             source = discord.FFmpegPCMAudio(
                 pipe=True, 
